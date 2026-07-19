@@ -5,8 +5,6 @@ import json
 
 from .llm import PLANNING_SYSTEM_MESSAGE, SYSTEM_MESSAGE, call_llm
 
-WRITE_TOOLS = {"write_file", "execute_command"}
-
 
 class Harness:
     """Orquesta la conversación con el LLM y la ejecución de tools.
@@ -125,17 +123,11 @@ class Harness:
         return None if allowed else reason
 
     def _needs_confirmation(self, tool_name, supervision_enabled):
-        """Con Supervisión activa, qué tools piden confirmación.
-
-        La lista `approval` de la config define el conjunto (si hay políticas);
-        si no, se cae al `WRITE_TOOLS` histórico. Con Supervisión apagada no se
-        pide nada, para no bloquear corridas no interactivas.
-        """
-        if not supervision_enabled:
+        """Con Supervisión activa, la lista `approval` de la config define qué tools
+        piden confirmación humana. Sin policies o sin supervisión, no se pide nada."""
+        if not supervision_enabled or self.policies is None:
             return False
-        if self.policies is not None:
-            return self.policies.requires_approval(tool_name)
-        return tool_name in WRITE_TOOLS
+        return self.policies.requires_approval(tool_name)
 
     # -------------------------------------------------------- supervision
     def _confirm_action(self, tool_name, args):

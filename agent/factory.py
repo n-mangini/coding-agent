@@ -31,7 +31,8 @@ def build_orchestrator():
     acá y en `Orchestrator`.
     """
     client = _build_client_from_env()
-    explorer = build_explorer(client)
+    policies = load_policies()
+    explorer = build_explorer(client, policies)
     return Orchestrator(explorer)
 
 
