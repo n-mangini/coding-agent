@@ -29,43 +29,45 @@ flowchart TD
     AN --> OR["Orchestrator<br/>agente principal"]
     OR --> ST["TaskState<br/>estado compartido"]
 
-    OR --> EX["Explorer<br/>lectura del repo"]
-    OR --> RE["Researcher<br/>RAG-first + web fallback"]
-    OR --> IM["Implementer<br/>redacta reporte"]
-    OR --> TE["Tester<br/>check tecnico acotado"]
-    OR --> RV["Reviewer<br/>revision final"]
+    subgraph SA["Subagentes coordinados por el Orchestrator"]
+        EX["Explorer<br/>lectura del repo"]
+        RE["Researcher<br/>RAG-first + web fallback"]
+        IM["Implementer<br/>redacta reporte"]
+        TE["Tester<br/>check tecnico acotado"]
+        RV["Reviewer<br/>revision final"]
+    end
 
-    EX --> ST
-    RE --> ST
-    IM --> ST
-    TE --> ST
-    RV --> ST
+    OR --> EX
+    EX --> RE
+    RE --> IM
+    IM --> TE
+    TE --> RV
+
+    EX -. registra resultado .-> ST
+    RE -. registra fuentes .-> ST
+    IM -. registra reporte .-> ST
+    TE -. registra check .-> ST
+    RV -. registra observaciones .-> ST
 
     RE --> RAG["RAG local<br/>Chroma + embeddings"]
     RE --> WEB["web_search<br/>Tavily opcional"]
     IM --> REP["REPORTE-ANALISIS.md"]
+    ST --> OUT["Reporte final<br/>fuentes, checks y observaciones"]
 
-    subgraph Base["Motor comun"]
-        H["Harness"]
-        L["LLM / OpenAI"]
-        TO["Tools"]
-        H --> L
+    subgraph HZ["Motor comun reutilizado por cada subagente"]
+        H["Harness"] --> L["LLM / OpenAI"]
         L --> TO
         TO --> H
     end
-
-    EX -. reutiliza .-> H
-    RE -. reutiliza .-> H
-    IM -. reutiliza .-> H
-    TE -. reutiliza .-> H
-    RV -. reutiliza .-> H
 ```
 
 El diagrama muestra que `analyze.py` es el punto de entrada del caso de uso. Ese
 archivo construye el `Orchestrator`, que actua como agente principal. El
 orquestador coordina a los subagentes y mantiene un `TaskState`, donde se guarda
 la informacion compartida entre pasos. Cada subagente reutiliza el mismo motor
-`Harness`, pero con instrucciones y herramientas distintas.
+`Harness`, pero con instrucciones y herramientas distintas. Para evitar cruces
+innecesarios, el motor comun se muestra como una caja separada en lugar de
+conectar cada subagente con flechas individuales.
 
 ## Rol del agente principal
 
