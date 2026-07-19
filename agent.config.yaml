@@ -1,0 +1,38 @@
+# Políticas del agente: se validan ANTES de ejecutar cada tool call.
+#
+# Cada sección declara `allow` y `deny` como listas de patrones estilo glob
+# (fnmatch). Reglas de evaluación (ver agent/policies.py):
+#   - `deny` tiene prioridad: si el objetivo matchea un patrón de deny, se bloquea.
+#   - `allow` vacío = permitir todo lo que no esté en deny.
+#   - `allow` no vacío = solo se permite lo que matchea algún patrón (allowlist).
+#
+# Mapeo tool -> sección: read_file/list_files -> read (matchea la ruta);
+# write_file -> write (ruta); execute_command -> commands (el comando).
+# Las tools sin sección (p. ej. web_search) no están gobernadas por políticas.
+policies:
+  read:
+    allow: []
+    deny:
+      - ".env"
+      - "**/.env"
+      - "**/secrets/**"
+
+  write:
+    allow: []
+    deny:
+      - ".env"
+      - "**/.env"
+      - "**/.git/**"
+
+  commands:
+    allow: []
+    deny:
+      - "*rm -rf*"
+      - "*sudo*"
+      - "*shutdown*"
+      - "*mkfs*"
+
+  # Tools que exigen confirmación humana aunque la Supervisión esté apagada.
+  approval:
+    - write_file
+    - execute_command
