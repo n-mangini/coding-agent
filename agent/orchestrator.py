@@ -1,17 +1,20 @@
 """Orquestador: agente principal que coordina subagentes y mantiene el TaskState.
 
-El pipeline cierra el ciclo generar→revisar del reporte: el Explorer y el
-Researcher juntan material, el Implementer redacta y persiste el reporte a partir
-del estado, y el Reviewer valida que responda al pedido y deja observaciones. La
-forma es la definitiva: el orquestador crea el estado compartido, delega en
-subagentes como si fueran tools y arma el reporte a partir del estado. Los
-próximos subagentes (p. ej. Tester) se enchufan agregando pasos a `run`, sin
-cambiar esta estructura.
+El pipeline cierra el ciclo analizar→generar→validar→revisar: el Explorer y el
+Researcher juntan material, el Implementer redacta y persiste el reporte, el
+Tester corre checks acotados y el Reviewer valida que el resultado responda al
+pedido. La forma es la definitiva: el orquestador crea el estado compartido,
+delega en subagentes como si fueran tools y arma el reporte a partir del estado.
 """
 
 from .observability import observed_run
 from .state import TaskState
-from .subagents import REPORT_FILENAME, extract_observations, extract_sources
+from .subagents import (
+    DEFAULT_TEST_COMMAND,
+    REPORT_FILENAME,
+    extract_observations,
+    extract_sources,
+)
 
 
 class Orchestrator:
@@ -21,13 +24,15 @@ class Orchestrator:
         explorer (Subagent): subagente de exploración (solo lectura).
         researcher (Subagent): subagente que busca en la web ante falta de evidencia.
         implementer (Subagent): subagente que redacta y persiste el reporte.
+        tester (Subagent): subagente que ejecuta checks acotados.
         reviewer (Subagent): subagente que valida el reporte vs. el pedido.
     """
 
-    def __init__(self, explorer, researcher, implementer, reviewer):
+    def __init__(self, explorer, researcher, implementer, tester, reviewer):
         self.explorer = explorer
         self.researcher = researcher
         self.implementer = implementer
+        self.tester = tester
         self.reviewer = reviewer
 
     def run(self, request):
@@ -46,6 +51,7 @@ class Orchestrator:
             self._explore(state)
             self._research(state)
             self._implement(state)
+            self._test(state)
             self._review(state)
         return self._render_report(state), state
 
@@ -109,8 +115,25 @@ class Orchestrator:
         self.implementer.run(task, state)
         state.record_modified_file(REPORT_FILENAME)
 
+    def _test(self, state):
+        """Paso 4: el Tester ejecuta un check real y registra el resultado.
+
+        El comando permitido compila los módulos Python para detectar errores de
+        sintaxis/import básicos. Si falla, no corta el pipeline: deja una
+        observación para que el Reviewer la considere.
+        """
+        task = (
+            "Ejecutá el check real permitido para validar el repo y el reporte. "
+            "Usá exactamente este comando con execute_command, sin modificarlo:\n\n"
+            f"{DEFAULT_TEST_COMMAND}\n\n"
+            "Reportá si pasó o falló y resumí stdout/stderr relevante."
+        )
+        result = self.tester.run(task, state)
+        if _check_failed(result):
+            state.record_observation(f"Tester: check fallido. {result}")
+
     def _review(self, state):
-        """Paso 4: el Reviewer valida el reporte contra el pedido original.
+        """Paso 5: el Reviewer valida el reporte contra el pedido original.
 
         Lee el archivo que dejó el Implementer y emite observaciones en su pie
         parseable; el orquestador las registra en el estado.
@@ -118,8 +141,10 @@ class Orchestrator:
         task = (
             "Validá que el reporte responda al pedido original del usuario. Leé "
             f"el archivo '{REPORT_FILENAME}' (y, si hace falta, contrastá con el "
-            "repo) y dejá tus observaciones.\n\n"
-            f"Pedido del usuario: {state.request}"
+            "repo) y dejá tus observaciones. Considerá también el resultado del "
+            "Tester.\n\n"
+            f"Pedido del usuario: {state.request}\n\n"
+            f"Resultado del Tester:\n{state.subagent_results.get('tester', '')}"
         )
         self.reviewer.run(task, state)
 
@@ -150,8 +175,21 @@ class Orchestrator:
         if state.observations:
             lines += ["", "## Revisión y observaciones", ""]
             lines += [f"- {obs}" for obs in state.observations]
+        tester_result = state.subagent_results.get("tester")
+        if tester_result:
+            lines += ["", "## Checks (Tester)", "", tester_result]
         if state.missing_evidence:
             lines += ["", "## Falta de evidencia", ""]
             lines += [f"- {gap}" for gap in state.missing_evidence]
         lines += ["", f"_Reporte persistido en `{REPORT_FILENAME}`._"]
         return "\n".join(lines)
+
+
+def _check_failed(result):
+    """Detecta fallos reportados por `execute_command` sin romper el pipeline."""
+    lowered = str(result).lower()
+    return (
+        "command failed" in lowered
+        or "error:" in lowered
+        or "traceback" in lowered
+    )

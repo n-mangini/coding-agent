@@ -17,6 +17,7 @@ from .subagents import (
     build_implementer,
     build_researcher,
     build_reviewer,
+    build_tester,
 )
 
 
@@ -56,7 +57,7 @@ def build_orchestrator():
     """Construye el orquestador multi-agente (agente principal + subagentes).
 
     Es el punto de entrada del caso de uso "analizar un repo → reporte". Cablea
-    el Explorer, el Researcher, el Implementer y el Reviewer; los próximos
+    el Explorer, el Researcher, el Implementer, el Tester y el Reviewer; los próximos
     subagentes se suman acá y en `Orchestrator`. Todos los subagentes reciben el
     mismo set de policies: el rol lo da el `tool_map` acotado, las policies son
     invariantes de seguridad globales iguales para todos.
@@ -71,8 +72,9 @@ def build_orchestrator():
     explorer = build_explorer(client, policies, memory_tools)
     researcher = build_researcher(client, retrieve, web_search, policies)
     implementer = build_implementer(client, policies)
+    tester = build_tester(client, policies)
     reviewer = build_reviewer(client, policies)
-    return Orchestrator(explorer, researcher, implementer, reviewer)
+    return Orchestrator(explorer, researcher, implementer, tester, reviewer)
 
 
 def build_harness():

@@ -5,6 +5,7 @@ from .explorer import build_explorer
 from .implementer import REPORT_FILENAME, build_implementer
 from .researcher import build_researcher, extract_sources
 from .reviewer import build_reviewer, extract_observations
+from .tester import DEFAULT_TEST_COMMAND, build_tester
 
 __all__ = [
     "Subagent",
@@ -15,4 +16,6 @@ __all__ = [
     "extract_sources",
     "build_reviewer",
     "extract_observations",
+    "build_tester",
+    "DEFAULT_TEST_COMMAND",
 ]
