@@ -15,6 +15,7 @@ cp .env.example .env   # set OPENAI_API_KEY (and TAVILY_API_KEY for web_search)
 
 python main.py                        # interactive chat (local workspace)
 python main.py --clone <github-url>   # clone a repo, chdir into it, then chat
+python analyze.py --python <url>      # ingest Python RAG sources, clone repo, analyze
 python run_tests.py --clone <url>     # run the automated test-case battery
 python -m rag.ingest <path>           # ingest docs/dir into the RAG index (Chroma)
 ```

@@ -52,7 +52,7 @@ Pero no recibe el shell general. `build_tester()` envuelve esa tool y solo
 permite comandos de `ALLOWED_TEST_COMMANDS`. El check inicial es:
 
 ```bash
-python3 -m compileall agent rag analyze.py main.py run_tests.py repo.py
+python3 -m compileall .
 ```
 
 Ese check es deliberadamente conservador: no hace llamadas LLM, no instala

@@ -12,7 +12,7 @@ import os
 from .chunking import chunk_text
 from .embeddings import embed_texts
 
-DEFAULT_PERSIST_DIR = os.getenv("RAG_PERSIST_DIR", "./rag_store")
+DEFAULT_PERSIST_DIR = "./rag_store"
 COLLECTION_NAME = "rag_docs"
 
 
@@ -72,7 +72,7 @@ class RagStore:
         return self.collection.count()
 
 
-def make_rag_store(client, persist_dir=DEFAULT_PERSIST_DIR, collection_name=COLLECTION_NAME):
+def make_rag_store(client, persist_dir=None, collection_name=COLLECTION_NAME):
     """Arma el `RagStore` sobre una colección persistente de Chroma.
 
     Devuelve None si `chromadb` no está instalado, para que la tool `retrieve`
@@ -82,6 +82,7 @@ def make_rag_store(client, persist_dir=DEFAULT_PERSIST_DIR, collection_name=COLL
         import chromadb
     except ImportError:
         return None
-    chroma = chromadb.PersistentClient(path=persist_dir)
+    path = persist_dir or os.getenv("RAG_PERSIST_DIR", DEFAULT_PERSIST_DIR)
+    chroma = chromadb.PersistentClient(path=path)
     collection = chroma.get_or_create_collection(name=collection_name)
     return RagStore(client, collection)

@@ -14,7 +14,7 @@ from .base import Subagent
 TESTER_TOOLS = ["execute_command"]
 
 DEFAULT_TEST_COMMAND = (
-    "python3 -m compileall agent rag analyze.py main.py run_tests.py repo.py"
+    "python3 -m compileall ."
 )
 ALLOWED_TEST_COMMANDS = (DEFAULT_TEST_COMMAND,)
 
