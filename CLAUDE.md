@@ -30,7 +30,7 @@ The agent is a tool-calling loop over the OpenAI chat completions API. Wiring fl
 - **`agent/llm.py`** — the OpenAI client, `SYSTEM_MESSAGE`, `MODEL`, and `TOOLS` (the OpenAI function schema). This schema is the source of truth the LLM sees; it must be kept in sync with the actual function signatures in `tools.py`. `call_llm()` is a single turn returning `(message, error)`.
 - **`agent/harness.py`** — `Harness.run_conversation()` is the core loop: call LLM → if it returned `tool_calls`, execute each and append `role:"tool"` results, repeat; else return the final text. Two extra modes live here: **Plan Mode** (`plan_mode_turn`/`generate_plan` — a separate no-tools LLM call that proposes a numbered plan and iterates on user feedback before execution) and **Supervision** (`_confirm_action` — human-in-the-loop confirmation, gated on `WRITE_TOOLS = {"write_file", "execute_command"}`).
 - **`agent/factory.py`** — the only place tool name → function mapping is defined (`tool_map`); add new tools here plus in `tools.py` and the `TOOLS` schema in `llm.py`.
-- **`agent/repo.py`** — `clone_repo()` shallow-clones a GitHub repo into `AGENT_WORKSPACE` and `chdir`s into it, so all relative tool paths resolve inside the cloned repo.
+- **`repo.py`** (project root, not part of the `agent/` package) — `clone_repo()` shallow-clones a GitHub repo into `AGENT_WORKSPACE` and `chdir`s into it, so all relative tool paths resolve inside the cloned repo. It lives outside `agent/` because it's environment setup the entry points run before the agent exists, not an agent capability.
 
 ### Things to know when editing
 

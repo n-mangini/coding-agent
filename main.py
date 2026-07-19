@@ -13,7 +13,7 @@ Comandos dentro del chat:
 import argparse
 
 from agent.factory import build_harness
-from agent.repo import clone_repo
+from repo import clone_repo
 
 
 def main():
