@@ -58,6 +58,7 @@ class Harness:
         self.tool_schemas = tool_schemas
         self.system_message = system_message
         self.policies = policies
+        self.loop_events = []
 
     def new_conversation(self):
         """Devuelve un historial nuevo, ya sembrado con el mensaje `system`."""
@@ -77,6 +78,7 @@ class Harness:
         conversation_history.append({"role": "user", "content": user_message})
         recent_signatures = []
         already_replanned = False
+        self.loop_events = []
 
         while True:
             conversation_history = self._manage_context(conversation_history)
@@ -123,11 +125,17 @@ class Harness:
 
         if not already_replanned:
             print(f"\n🔁 {_REPLAN_NUDGE}")
+            self.loop_events.append(
+                "Loop detectado: se pidió replantear la estrategia."
+            )
             conversation_history.append({"role": "user", "content": _REPLAN_NUDGE})
             signatures.clear()
             return None, True
 
         print(f"\n🛑 {_LOOP_STOP_MESSAGE}")
+        self.loop_events.append(
+            "Loop persistente: el agente se detuvo y pidió ayuda para continuar."
+        )
         conversation_history.append(
             {"role": "assistant", "content": _LOOP_STOP_MESSAGE}
         )

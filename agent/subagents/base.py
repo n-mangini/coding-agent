@@ -40,4 +40,6 @@ class Subagent:
         history = self.harness.new_conversation()
         result, _ = self.harness.run_conversation(task, history)
         state.record_result(self.name, result)
+        for event in self.harness.loop_events:
+            state.record_observation(f"{self.name}: {event}")
         return result
