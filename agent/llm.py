@@ -28,7 +28,7 @@ PLANNING_SYSTEM_MESSAGE = (
     "concrete. Output only the plan text, nothing else."
 )
 
-TOOLS = [
+TOOL_SCHEMAS = [
     {
         "type": "function",
         "function": {
@@ -131,7 +131,7 @@ def build_client(api_key):
     return OpenAI(api_key=api_key)
 
 
-def call_llm(client, messages, tools=TOOLS, model=MODEL):
+def call_llm(client, messages, tools=TOOL_SCHEMAS, model=MODEL):
     """Single LLM turn. Returns (message, error).
 
     Con `tools=None` se llama al modelo sin herramientas (p. ej. Plan Mode,

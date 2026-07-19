@@ -14,13 +14,13 @@ class Harness:
     Args:
         client: cliente OpenAI.
         tool_map (dict): nombre de tool -> función Python.
-        tools (list): esquema de tools en formato OpenAI.
+        tool_schemas (list): esquema de tools en formato OpenAI (lo que ve el LLM).
     """
 
-    def __init__(self, client, tool_map, tools):
+    def __init__(self, client, tool_map, tool_schemas):
         self.client = client
         self.tool_map = tool_map
-        self.tools = tools
+        self.tool_schemas = tool_schemas
 
     def new_conversation(self):
         """Devuelve un historial nuevo, ya sembrado con el mensaje `system`."""
@@ -35,7 +35,7 @@ class Harness:
 
         while True:
             llm_response, error = call_llm(
-                self.client, conversation_history, tools=self.tools
+                self.client, conversation_history, tools=self.tool_schemas
             )
 
             if error:

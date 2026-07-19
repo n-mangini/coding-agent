@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 from . import tools as tools_module
 from .harness import Harness
-from .llm import TOOLS, build_client
+from .llm import TOOL_SCHEMAS, build_client
 
 
 def build_harness():
@@ -40,4 +40,4 @@ def build_harness():
         "web_search": web_search,
     }
 
-    return Harness(client, tool_map, TOOLS)
+    return Harness(client, tool_map, TOOL_SCHEMAS)
