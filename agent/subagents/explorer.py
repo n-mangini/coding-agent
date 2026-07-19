@@ -10,14 +10,16 @@ from ..harness import Harness
 from ..llm import schemas_for
 from .base import Subagent
 
-EXPLORER_TOOLS = ["read_file", "list_files"]
-
 EXPLORER_SYSTEM_MESSAGE = (
     "Sos el subagente EXPLORER de un sistema de análisis de repositorios. "
     "Tu tarea es entender el repositorio del directorio actual: su estructura, "
     "sus dependencias y sus convenciones de código. "
     "Solo tenés herramientas de LECTURA y EXPLORACIÓN (list_files, read_file): "
     "no escribís archivos ni ejecutás comandos. "
+    "Además tenés memoria persistente del proyecto: al empezar llamá a read_memory "
+    "para reutilizar lo aprendido en corridas anteriores, y cuando confirmes algo "
+    "estable (arquitectura, dependencias, comandos, convenciones) guardalo con "
+    "remember para no re-descubrirlo la próxima vez. "
     "Explorá de lo general a lo particular (primero el árbol, luego los archivos "
     "clave como README, requirements/pyproject, config y algunos módulos). "
     "Cuando tengas evidencia suficiente, respondé SIN llamar más tools con un "
@@ -28,16 +30,22 @@ EXPLORER_SYSTEM_MESSAGE = (
 )
 
 
-def build_explorer(client, policies=None):
-    """Construye el subagente Explorer con permisos de solo lectura."""
+def build_explorer(client, policies=None, memory_tools=None):
+    """Construye el subagente Explorer (solo lectura + memoria del proyecto).
+
+    `memory_tools` son las tools `read_memory`/`remember` cerradas sobre la
+    memoria del proyecto (ver `make_memory_tools`); si es None, el Explorer corre
+    sin memoria (útil en tests o usos sin persistencia).
+    """
     tool_map = {
         "read_file": tools_module.read_file,
         "list_files": tools_module.list_files,
+        **(memory_tools or {}),
     }
     harness = Harness(
         client,
         tool_map,
-        schemas_for(EXPLORER_TOOLS),
+        schemas_for(list(tool_map)),
         system_message=EXPLORER_SYSTEM_MESSAGE,
         policies=policies,
     )

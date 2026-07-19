@@ -18,7 +18,10 @@ class TaskState:
         subagent_results: resultado final de cada subagente, por nombre.
         sources: fuentes citadas (repo/RAG/web/...); las llena el Researcher.
         modified_files: archivos escritos/modificados durante la tarea.
-        observations: notas transversales (dudas, riesgos, falta de evidencia).
+        observations: notas transversales (dudas, riesgos).
+        missing_evidence: faltas de evidencia reconocidas explícitamente (lo que
+            no se pudo verificar y quedó sin respaldo). Se separa de `observations`
+            para que el reporte pueda ser honesto sobre lo que no sabe.
     """
 
     request: str
@@ -27,6 +30,7 @@ class TaskState:
     sources: list[str] = field(default_factory=list)
     modified_files: list[str] = field(default_factory=list)
     observations: list[str] = field(default_factory=list)
+    missing_evidence: list[str] = field(default_factory=list)
 
     def record_progress(self, note):
         """Anota un paso de avance."""
@@ -45,5 +49,9 @@ class TaskState:
         self.modified_files.append(path)
 
     def record_observation(self, note):
-        """Anota una observación transversal (dudas, riesgos, falta de evidencia)."""
+        """Anota una observación transversal (dudas, riesgos)."""
         self.observations.append(note)
+
+    def record_missing_evidence(self, note):
+        """Reconoce explícitamente una falta de evidencia (algo no verificado)."""
+        self.missing_evidence.append(note)

@@ -71,7 +71,7 @@ class Orchestrator:
         for origin, reference in sources:
             state.record_source(f"{reference} (origen: {origin})")
         if not any(origin == "web" for origin, _ in sources):
-            state.record_observation(
+            state.record_missing_evidence(
                 "El Researcher no recuperó evidencia web "
                 "(posible stub sin TAVILY_API_KEY): la respuesta se apoya en inferencia."
             )
@@ -103,4 +103,7 @@ class Orchestrator:
         if state.observations:
             lines += ["", "## Observaciones", ""]
             lines += [f"- {obs}" for obs in state.observations]
+        if state.missing_evidence:
+            lines += ["", "## Falta de evidencia", ""]
+            lines += [f"- {gap}" for gap in state.missing_evidence]
         return "\n".join(lines)
