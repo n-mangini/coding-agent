@@ -25,7 +25,7 @@ PLANNING_SYSTEM_MESSAGE = (
     "You are in PLAN MODE. Do NOT call any tools. "
     "Given the user's request, output a concise, numbered step-by-step plan "
     "describing which tools you would use (read_file, write_file, "
-    "list_files, execute_command, web_search) and why. Keep it short and "
+    "list_files, execute_command, retrieve, web_search) and why. Keep it short and "
     "concrete. Output only the plan text, nothing else."
 )
 
@@ -104,6 +104,30 @@ TOOL_SCHEMAS = [
                     }
                 },
                 "required": ["command"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "retrieve",
+            "description": (
+                "Recupera chunks del índice RAG (Chroma) más relevantes para una "
+                "consulta, con sus fuentes. Consultalo PRIMERO, antes de web_search."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "La consulta en lenguaje natural.",
+                    },
+                    "k": {
+                        "type": "integer",
+                        "description": "Cuántos chunks devolver (por defecto 4).",
+                    },
+                },
+                "required": ["query"],
             },
         },
     },

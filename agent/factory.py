@@ -4,6 +4,8 @@ import os
 
 from dotenv import load_dotenv
 
+from rag import make_rag_store
+
 from . import tools as tools_module
 from .harness import Harness
 from .llm import TOOL_SCHEMAS, build_client
@@ -34,6 +36,17 @@ def _build_web_search_from_env():
     return tools_module.make_web_search(tavily_api_key)
 
 
+def _build_retrieve(client):
+    """Arma la tool `retrieve` sobre el índice RAG (Chroma); stub si no hay store.
+
+    `make_rag_store` devuelve None sin `chromadb`, y `make_retrieve` degrada a un
+    stub que avisa que el RAG no está disponible (como `web_search` sin Tavily)."""
+    rag_store = make_rag_store(client)
+    if rag_store is None:
+        print("chromadb no disponible — retrieve (RAG) quedará como stub.")
+    return tools_module.make_retrieve(rag_store)
+
+
 def build_orchestrator():
     """Construye el orquestador multi-agente (agente principal + subagentes).
 
@@ -46,11 +59,12 @@ def build_orchestrator():
     client = _build_client_from_env()
     policies = load_policies()
     web_search = _build_web_search_from_env()
+    retrieve = _build_retrieve(client)
     # Memoria por-proyecto compartida: los subagentes la leen y la escriben con
     # las tools `read_memory` / `remember` cerradas sobre esta misma instancia.
     memory_tools = make_memory_tools(load_project_memory())
     explorer = build_explorer(client, policies, memory_tools)
-    researcher = build_researcher(client, web_search, policies)
+    researcher = build_researcher(client, retrieve, web_search, policies)
     return Orchestrator(explorer, researcher)
 
 
@@ -62,12 +76,14 @@ def build_harness():
     """
     client = _build_client_from_env()
     web_search = _build_web_search_from_env()
+    retrieve = _build_retrieve(client)
 
     tool_map = {
         "read_file": tools_module.read_file,
         "list_files": tools_module.list_files,
         "write_file": tools_module.write_file,
         "execute_command": tools_module.execute_command,
+        "retrieve": retrieve,
         "web_search": web_search,
         **make_memory_tools(load_project_memory()),
     }
