@@ -79,11 +79,13 @@ REPORTE-ANALISIS.md
 
 Eso hace que la escritura sea realmente acotada por rol: aunque el LLM pida otro
 path, la tool devuelve error y no escribe fuera del artefacto esperado. El
-orquestador registra ese archivo con `state.record_modified_file(...)`.
+subagente captura el contenido escrito y lo usa como resultado, para que el
+reporte renderizado no dependa de la prosa final del LLM después de la tool-call.
+El orquestador registra ese archivo con `state.record_modified_file(...)`.
 
 ### Reviewer
 
-El Reviewer es solo lectura:
+El Reviewer es solo lectura y también está acotado al repo actual:
 
 ```text
 read_file
@@ -91,8 +93,9 @@ list_files
 ```
 
 Lee `REPORTE-ANALISIS.md`, valida que responda al pedido original y contrasta con
-el repo si hace falta. Sus observaciones no se parsean desde texto libre: la
-revisión termina con una tool privada:
+el repo si hace falta. Sus wrappers de lectura rechazan rutas absolutas y paths
+con `..`, así no sale del directorio analizado. Sus observaciones no se parsean
+desde texto libre: la revisión termina con una tool privada:
 
 ```text
 submit_review_result(veredicto, observaciones)
@@ -121,10 +124,13 @@ Durante la revisión se agregaron dos ajustes:
 
 1. **Escritura acotada real para Implementer.** La PR original le daba
    `write_file` completo; ahora el callable expuesto rechaza cualquier path que
-   no sea `REPORT_FILENAME`.
+   no sea `REPORT_FILENAME` y el subagente devuelve como resultado el contenido
+   exacto que escribió.
 2. **Observaciones estructuradas para Reviewer.** Se reemplazó el pie parseable
    `OBSERVACION: ...` por `submit_review_result`, siguiendo el mismo criterio de
    robustez usado para las fuentes del Researcher.
+3. **Lectura relativa para Reviewer.** El Reviewer conserva `read_file` /
+   `list_files`, pero envueltas para rechazar rutas absolutas o con `..`.
 
 ## Verificación
 

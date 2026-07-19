@@ -39,6 +39,33 @@ IMPLEMENTER_SYSTEM_MESSAGE = (
 )
 
 
+class ImplementerSubagent(Subagent):
+    """Subagente Implementer que expone como resultado el reporte escrito."""
+
+    def __init__(self, harness, written_report):
+        super().__init__(
+            name="implementer",
+            description="Redacta el reporte de análisis desde el estado y lo persiste.",
+            harness=harness,
+        )
+        self.written_report = written_report
+
+    def run(self, task, state):
+        """Ejecuta la redacción y usa el contenido escrito como resultado."""
+        state.record_progress(f"Delegando en '{self.name}'.")
+        self.written_report.clear()
+        history = self.harness.new_conversation()
+        result, _ = self.harness.run_conversation(task, history)
+
+        if self.written_report:
+            result = self.written_report["content"]
+
+        state.record_result(self.name, result)
+        for event in self.harness.loop_events:
+            state.record_observation(f"{self.name}: {event}")
+        return result
+
+
 def build_implementer(client, policies=None):
     """Construye el subagente Implementer, acotado a escribir el reporte.
 
@@ -48,13 +75,18 @@ def build_implementer(client, policies=None):
             producción las recibe; el rol lo da el `tool_map` acotado).
     """
 
+    written_report = {}
+
     def write_report(file_path, content):
         if file_path != REPORT_FILENAME:
             return (
                 f"Error: el Implementer solo puede escribir '{REPORT_FILENAME}', "
                 f"no '{file_path}'."
             )
-        return tools_module.write_file(file_path, content)
+        result = tools_module.write_file(file_path, content)
+        if not result.startswith("Error:"):
+            written_report["content"] = content
+        return result
 
     tool_map = {"write_file": write_report}
     harness = Harness(
@@ -64,8 +96,4 @@ def build_implementer(client, policies=None):
         system_message=IMPLEMENTER_SYSTEM_MESSAGE,
         policies=policies,
     )
-    return Subagent(
-        name="implementer",
-        description="Redacta el reporte de análisis desde el estado y lo persiste (escritura acotada).",
-        harness=harness,
-    )
+    return ImplementerSubagent(harness, written_report)

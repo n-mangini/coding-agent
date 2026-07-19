@@ -48,7 +48,8 @@ REVIEWER_SYSTEM_MESSAGE = (
     "que no invente cosas sin evidencia. "
     "Tenés herramientas de solo LECTURA (read_file, list_files): leé el archivo "
     "del reporte que te indica el orquestador y, si hace falta, contrastá con "
-    "archivos del repo. No escribís ni ejecutás nada. "
+    "archivos del repo usando solo rutas relativas al directorio actual. No uses "
+    "rutas absolutas ni salgas del repo. No escribís ni ejecutás nada. "
     "Cuando tengas el veredicto, tu ÚLTIMA tool-call debe ser "
     "submit_review_result con JSON estructurado: 'veredicto' y 'observaciones'. "
     "Incluí una observación por cada hallazgo relevante (faltantes, afirmaciones "
@@ -103,9 +104,19 @@ def build_reviewer(client, policies=None):
         submitted["observaciones"] = _normalize_observations(observaciones)
         return "Resultado de revisión registrado."
 
+    def read_repo_file(file_path):
+        if not _is_safe_relative_path(file_path):
+            return f"Error: el Reviewer solo puede leer rutas relativas del repo: {file_path}"
+        return tools_module.read_file(file_path)
+
+    def list_repo_files(path="."):
+        if not _is_safe_relative_path(path):
+            return f"Error: el Reviewer solo puede listar rutas relativas del repo: {path}"
+        return tools_module.list_files(path)
+
     tool_map = {
-        "read_file": tools_module.read_file,
-        "list_files": tools_module.list_files,
+        "read_file": read_repo_file,
+        "list_files": list_repo_files,
         "submit_review_result": submit_review_result,
     }
     harness = Harness(
@@ -141,3 +152,10 @@ def _normalize_observations(raw_observations):
         if text:
             observations.append(text)
     return observations
+
+
+def _is_safe_relative_path(path):
+    """True si `path` se mantiene dentro del repo actual."""
+    text = str(path or ".").replace("\\", "/")
+    parts = [part for part in text.split("/") if part not in ("", ".")]
+    return not text.startswith("/") and ".." not in parts
