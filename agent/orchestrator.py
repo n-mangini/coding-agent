@@ -8,17 +8,20 @@ agregando pasos a `run`, sin cambiar esta estructura.
 """
 
 from .state import TaskState
+from .subagents import extract_sources
 
 
 class Orchestrator:
     """Coordina a los subagentes y sostiene el estado de la tarea.
 
     Args:
-        explorer (Subagent): subagente de exploración (único en el skeleton).
+        explorer (Subagent): subagente de exploración.
+        researcher (Subagent): subagente que busca en la web ante falta de evidencia.
     """
 
-    def __init__(self, explorer):
+    def __init__(self, explorer, researcher):
         self.explorer = explorer
+        self.researcher = researcher
 
     def run(self, request):
         """Ejecuta el caso de uso end-to-end y devuelve (reporte, estado).
@@ -30,20 +33,52 @@ class Orchestrator:
             tuple[str, TaskState]: el mini-reporte y el estado compartido final.
         """
         state = TaskState(request=request)
+        self._explore(state)
+        self._research(state)
+        return self._render_report(state), state
 
+    def _explore(self, state):
+        """Paso 1: el Explorer describe estructura, dependencias y convenciones."""
         task = (
             "Analizá el repositorio del directorio actual y describí su "
             "estructura, sus dependencias y sus convenciones.\n\n"
-            f"Pedido del usuario: {request}"
+            f"Pedido del usuario: {state.request}"
         )
         self.explorer.run(task, state)
 
-        return self._render_report(state), state
+    def _research(self, state):
+        """Paso 2: el Researcher busca en la web lo que la exploración no cubre.
+
+        Registra las fuentes recuperadas (con su origen) en el estado. Si no se
+        recuperó ninguna fuente web, lo anota como falta de evidencia — cubre el
+        caso del stub sin TAVILY_API_KEY sin tratamiento especial.
+        """
+        explorer_result = state.subagent_results.get("explorer", "")
+        task = (
+            "A partir del pedido del usuario y de lo que ya se sabe del repo, "
+            "identificá qué falta de evidencia queda y buscá en la web para "
+            "cubrirla. Citá fuentes y marcá su origen (web / inferencia).\n\n"
+            f"Pedido del usuario: {state.request}\n\n"
+            f"Lo que ya se sabe del repo (Explorer):\n{explorer_result}"
+        )
+        result = self.researcher.run(task, state)
+
+        sources = extract_sources(result)
+        for origin, reference in sources:
+            state.record_source(f"{reference} (origen: {origin})")
+        if not any(origin == "web" for origin, _ in sources):
+            state.record_observation(
+                "El Researcher no recuperó evidencia web "
+                "(posible stub sin TAVILY_API_KEY): la respuesta se apoya en inferencia."
+            )
 
     def _render_report(self, state):
         """Arma el mini-reporte a partir de lo que dejaron los subagentes."""
         explorer_result = state.subagent_results.get(
             "explorer", "(el Explorer no produjo resultado)"
+        )
+        researcher_result = state.subagent_results.get(
+            "researcher", "(el Researcher no produjo resultado)"
         )
         lines = [
             "# Mini-reporte de análisis del repositorio",
@@ -53,7 +88,14 @@ class Orchestrator:
             "## Exploración (Explorer)",
             "",
             explorer_result,
+            "",
+            "## Investigación (Researcher)",
+            "",
+            researcher_result,
         ]
+        if state.sources:
+            lines += ["", "## Fuentes", ""]
+            lines += [f"- {source}" for source in state.sources]
         if state.observations:
             lines += ["", "## Observaciones", ""]
             lines += [f"- {obs}" for obs in state.observations]
