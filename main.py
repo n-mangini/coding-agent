@@ -15,7 +15,6 @@ Comandos dentro del chat:
 import argparse
 
 from agent.factory import build_harness
-from agent.llm import SYSTEM_MESSAGE
 from agent.repo import clone_repo
 
 
@@ -33,7 +32,7 @@ def main():
 
     harness = build_harness()
 
-    conversation_history = [{"role": "system", "content": SYSTEM_MESSAGE}]
+    conversation_history = harness.new_conversation()
     plan_mode_enabled = False
     supervision_enabled = False
 
@@ -83,26 +82,25 @@ def main():
             )
             continue
 
+        # Por defecto ejecutamos el mensaje tal cual. Plan mode solo cambia
+        # QUÉ input recibe el agente (le antepone el plan aprobado); por eso
+        # run_conversation se llama una sola vez, abajo, en ambos casos.
+        agent_input = user_input
         if plan_mode_enabled:
             approved_plan = harness.plan_mode_turn(user_input, conversation_history)
             if approved_plan is None:
                 print("Task cancelled.")
                 continue
-            framed_input = (
+            agent_input = (
                 f"{user_input}\n\n"
                 f"Follow this approved plan strictly:\n{approved_plan}"
             )
-            final_response, conversation_history = harness.run_conversation(
-                framed_input,
-                conversation_history,
-                supervision_enabled=supervision_enabled,
-            )
-        else:
-            final_response, conversation_history = harness.run_conversation(
-                user_input,
-                conversation_history,
-                supervision_enabled=supervision_enabled,
-            )
+
+        final_response, conversation_history = harness.run_conversation(
+            agent_input,
+            conversation_history,
+            supervision_enabled=supervision_enabled,
+        )
 
         print(f"\nAgent: {final_response}")
 

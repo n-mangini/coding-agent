@@ -11,7 +11,6 @@ Uso:
 import argparse
 
 from agent.factory import build_harness
-from agent.llm import SYSTEM_MESSAGE
 from agent.repo import clone_repo
 
 EXPLICIT_TEST_CASES = [
@@ -85,7 +84,7 @@ def run(harness, test_cases):
         print(f"Description: {description.strip()}")
         print(f"{'=' * 50}")
 
-        conversation_history = [{"role": "system", "content": SYSTEM_MESSAGE}]
+        conversation_history = harness.new_conversation()
 
         user_input = f"Please perform the following task: {description.strip()}"
 

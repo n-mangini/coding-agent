@@ -6,7 +6,7 @@ Migrado desde el notebook del TP1 (celdas 17 y 19).
 import inspect
 import json
 
-from .llm import MODEL, call_llm
+from .llm import MODEL, SYSTEM_MESSAGE, call_llm
 
 WRITE_TOOLS = {"write_file", "execute_command"}
 
@@ -24,6 +24,10 @@ class Harness:
         self.client = client
         self.tool_map = tool_map
         self.tools = tools
+
+    def new_conversation(self):
+        """Devuelve un historial nuevo, ya sembrado con el mensaje `system`."""
+        return [{"role": "system", "content": SYSTEM_MESSAGE}]
 
     # ---------------------------------------------------------------- loop
     def run_conversation(
