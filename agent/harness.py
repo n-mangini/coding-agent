@@ -51,58 +51,56 @@ class Harness:
             if llm_response.tool_calls:
                 conversation_history.append(llm_response)
                 for tool_call in llm_response.tool_calls:
-                    function_name = tool_call.function.name
-                    function_args = json.loads(tool_call.function.arguments)
-
-                    if function_name not in self.tool_map:
-                        error_message = f"Error: Tool '{function_name}' not found."
-                        print(error_message)
-                        conversation_history.append(
-                            {
-                                "tool_call_id": tool_call.id,
-                                "role": "tool",
-                                "name": function_name,
-                                "content": error_message,
-                            }
-                        )
-                        continue
-
-                    tool_function = self.tool_map[function_name]
-                    sig = inspect.signature(tool_function)
-                    filtered_args = {
-                        k: v for k, v in function_args.items() if k in sig.parameters
-                    }
-
-                    if supervision_enabled and function_name in WRITE_TOOLS:
-                        if not self._confirm_action(function_name, filtered_args):
-                            tool_output = f"User denied execution of {function_name}."
-                            print(f"\n❌ {tool_output}")
-                            conversation_history.append(
-                                {
-                                    "tool_call_id": tool_call.id,
-                                    "role": "tool",
-                                    "name": function_name,
-                                    "content": tool_output,
-                                }
-                            )
-                            continue
-
-                    print(
-                        f"\n🤖 Calling tool: {function_name} with args: {filtered_args}"
-                    )
-                    tool_output = tool_function(**filtered_args)
-                    print(f"Tool output: {tool_output}")
-                    conversation_history.append(
-                        {
-                            "tool_call_id": tool_call.id,
-                            "role": "tool",
-                            "name": function_name,
-                            "content": tool_output,
-                        }
+                    self._execute_tool_call(
+                        tool_call, conversation_history, supervision_enabled
                     )
             else:
                 conversation_history.append(llm_response)
                 return llm_response.content, conversation_history
+
+    # ------------------------------------------------------ tool execution
+    def _execute_tool_call(self, tool_call, conversation_history, supervision_enabled):
+        """Ejecuta una única tool pedida por el LLM y appendea su resultado.
+
+        Concentra el 'cómo': parsear los args, validar que la tool exista,
+        filtrar argumentos contra la firma real y (si corresponde) pedir
+        supervisión. `content` acumula el texto a devolver y se appendea una
+        sola vez al final, como role:"tool".
+        """
+        function_name = tool_call.function.name
+        function_args = json.loads(tool_call.function.arguments)
+
+        if function_name not in self.tool_map:
+            content = f"Error: Tool '{function_name}' not found."
+            print(content)
+        else:
+            tool_function = self.tool_map[function_name]
+            sig = inspect.signature(tool_function)
+            filtered_args = {
+                k: v for k, v in function_args.items() if k in sig.parameters
+            }
+
+            denied = (
+                supervision_enabled
+                and function_name in WRITE_TOOLS
+                and not self._confirm_action(function_name, filtered_args)
+            )
+            if denied:
+                content = f"User denied execution of {function_name}."
+                print(f"\n❌ {content}")
+            else:
+                print(f"\n🤖 Calling tool: {function_name} with args: {filtered_args}")
+                content = tool_function(**filtered_args)
+                print(f"Tool output: {content}")
+
+        conversation_history.append(
+            {
+                "tool_call_id": tool_call.id,
+                "role": "tool",
+                "name": function_name,
+                "content": content,
+            }
+        )
 
     # -------------------------------------------------------- supervision
     def _confirm_action(self, tool_name, args):
