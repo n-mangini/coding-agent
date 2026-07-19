@@ -2,6 +2,7 @@
 
 import os
 
+from .memory import CATEGORIES as MEMORY_CATEGORIES
 from .observability import build_openai_client
 
 MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
@@ -120,6 +121,45 @@ TOOL_SCHEMAS = [
                     }
                 },
                 "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_memory",
+            "description": (
+                "Devuelve la memoria persistente del proyecto (lo aprendido en "
+                "corridas anteriores: arquitectura, dependencias, comandos, "
+                "convenciones, decisiones, bugs, resúmenes). Consultala al empezar "
+                "para no re-descubrir lo ya sabido."
+            ),
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "remember",
+            "description": (
+                "Guarda un dato duradero del proyecto en la memoria persistente, "
+                "bajo una categoría. Usalo cuando descubras algo estable que "
+                "convenga recordar en próximas corridas."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "categoria": {
+                        "type": "string",
+                        "enum": list(MEMORY_CATEGORIES),
+                        "description": "Categoría bajo la que archivar la nota.",
+                    },
+                    "nota": {
+                        "type": "string",
+                        "description": "El dato a recordar, corto y concreto.",
+                    },
+                },
+                "required": ["categoria", "nota"],
             },
         },
     },

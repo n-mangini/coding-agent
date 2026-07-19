@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from . import tools as tools_module
 from .harness import Harness
 from .llm import TOOL_SCHEMAS, build_client
+from .memory import load_project_memory, make_memory_tools
 from .orchestrator import Orchestrator
 from .policies import load_policies
 from .subagents import build_explorer, build_researcher
@@ -45,7 +46,10 @@ def build_orchestrator():
     client = _build_client_from_env()
     policies = load_policies()
     web_search = _build_web_search_from_env()
-    explorer = build_explorer(client, policies)
+    # Memoria por-proyecto compartida: los subagentes la leen y la escriben con
+    # las tools `read_memory` / `remember` cerradas sobre esta misma instancia.
+    memory_tools = make_memory_tools(load_project_memory())
+    explorer = build_explorer(client, policies, memory_tools)
     researcher = build_researcher(client, web_search, policies)
     return Orchestrator(explorer, researcher)
 
@@ -65,6 +69,7 @@ def build_harness():
         "write_file": tools_module.write_file,
         "execute_command": tools_module.execute_command,
         "web_search": web_search,
+        **make_memory_tools(load_project_memory()),
     }
 
     return Harness(client, tool_map, TOOL_SCHEMAS, policies=load_policies())
