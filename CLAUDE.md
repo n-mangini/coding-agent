@@ -39,3 +39,17 @@ The agent is a tool-calling loop over the OpenAI chat completions API. Wiring fl
 - `conversation_history` mixes raw OpenAI message objects (assistant turns) and plain dicts (system/user/tool turns); `_planning_history` normalizes this when building the planning prompt. Preserve that duality if you touch history handling.
 - Plan Mode and Supervision are toggled at runtime via chat commands (`/plan on|off|status`, `/supervise on|off|status`) handled in `main.py`, not via config.
 - `execute_command` runs `subprocess.run(..., shell=True)` and `write_file` overwrites without confirmation unless Supervision is on — the loop can modify the filesystem of whatever cwd it runs in.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in this repo's GitHub Issues via the `gh` CLI; external PRs are not a triage surface. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout (`CONTEXT.md` + `docs/adr/` at the repo root). See `docs/agents/domain.md`.
