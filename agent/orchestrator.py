@@ -1,28 +1,34 @@
 """Orquestador: agente principal que coordina subagentes y mantiene el TaskState.
 
-En este walking skeleton el pipeline es de un solo paso (delega en el Explorer),
-pero la forma ya es la definitiva: el orquestador crea el estado compartido,
-delega en subagentes como si fueran tools y arma el reporte a partir del estado.
-Los próximos subagentes (Implementer, Reviewer, Tester, Researcher) se enchufan
-agregando pasos a `run`, sin cambiar esta estructura.
+El pipeline cierra el ciclo generar→revisar del reporte: el Explorer y el
+Researcher juntan material, el Implementer redacta y persiste el reporte a partir
+del estado, y el Reviewer valida que responda al pedido y deja observaciones. La
+forma es la definitiva: el orquestador crea el estado compartido, delega en
+subagentes como si fueran tools y arma el reporte a partir del estado. Los
+próximos subagentes (p. ej. Tester) se enchufan agregando pasos a `run`, sin
+cambiar esta estructura.
 """
 
 from .observability import observed_run
 from .state import TaskState
-from .subagents import extract_sources
+from .subagents import REPORT_FILENAME, extract_observations, extract_sources
 
 
 class Orchestrator:
     """Coordina a los subagentes y sostiene el estado de la tarea.
 
     Args:
-        explorer (Subagent): subagente de exploración.
+        explorer (Subagent): subagente de exploración (solo lectura).
         researcher (Subagent): subagente que busca en la web ante falta de evidencia.
+        implementer (Subagent): subagente que redacta y persiste el reporte.
+        reviewer (Subagent): subagente que valida el reporte vs. el pedido.
     """
 
-    def __init__(self, explorer, researcher):
+    def __init__(self, explorer, researcher, implementer, reviewer):
         self.explorer = explorer
         self.researcher = researcher
+        self.implementer = implementer
+        self.reviewer = reviewer
 
     def run(self, request):
         """Ejecuta el caso de uso end-to-end y devuelve (reporte, estado).
@@ -31,7 +37,7 @@ class Orchestrator:
             request (str): pedido del usuario (p. ej. "analizá este repo").
 
         Returns:
-            tuple[str, TaskState]: el mini-reporte y el estado compartido final.
+            tuple[str, TaskState]: el reporte final y el estado compartido.
         """
         state = TaskState(request=request)
         # Traza raíz del caso de uso: las generations (turnos LLM) y los spans
@@ -39,6 +45,8 @@ class Orchestrator:
         with observed_run("analyze-repo", request):
             self._explore(state)
             self._research(state)
+            self._implement(state)
+            self._review(state)
         return self._render_report(state), state
 
     def _explore(self, state):
@@ -79,34 +87,71 @@ class Orchestrator:
                 "y/o web_search stub sin TAVILY_API_KEY): la respuesta se apoya en inferencia."
             )
 
+    def _implement(self, state):
+        """Paso 3: el Implementer redacta el reporte desde el estado y lo persiste.
+
+        Le pasa el material crudo (Explorer + Researcher + fuentes) y el pedido
+        original. El Implementer escribe el reporte en `REPORT_FILENAME`; el
+        orquestador registra ese archivo como modificado.
+        """
+        explorer_result = state.subagent_results.get("explorer", "")
+        researcher_result = state.subagent_results.get("researcher", "")
+        sources = "\n".join(f"- {s}" for s in state.sources) or "(sin fuentes)"
+        task = (
+            "Redactá el reporte final de análisis del repo a partir del material "
+            f"provisto y guardalo en '{REPORT_FILENAME}'. El reporte tiene que "
+            "responder al pedido original del usuario.\n\n"
+            f"Pedido del usuario: {state.request}\n\n"
+            f"Exploración (Explorer):\n{explorer_result}\n\n"
+            f"Investigación (Researcher):\n{researcher_result}\n\n"
+            f"Fuentes:\n{sources}"
+        )
+        self.implementer.run(task, state)
+        state.record_modified_file(REPORT_FILENAME)
+
+    def _review(self, state):
+        """Paso 4: el Reviewer valida el reporte contra el pedido original.
+
+        Lee el archivo que dejó el Implementer y emite observaciones en su pie
+        parseable; el orquestador las registra en el estado.
+        """
+        task = (
+            "Validá que el reporte responda al pedido original del usuario. Leé "
+            f"el archivo '{REPORT_FILENAME}' (y, si hace falta, contrastá con el "
+            "repo) y dejá tus observaciones.\n\n"
+            f"Pedido del usuario: {state.request}"
+        )
+        self.reviewer.run(task, state)
+
+        observations = extract_observations(self.reviewer)
+        for observation in observations:
+            state.record_observation(f"Reviewer: {observation}")
+        if not observations:
+            state.record_observation(
+                "El Reviewer no emitió observaciones parseables sobre el reporte."
+            )
+
     def _render_report(self, state):
-        """Arma el mini-reporte a partir de lo que dejaron los subagentes."""
-        explorer_result = state.subagent_results.get(
-            "explorer", "(el Explorer no produjo resultado)"
+        """Devuelve el reporte final: el que redactó el Implementer, más el
+        veredicto de la revisión y las observaciones acumuladas en el estado.
+
+        El cuerpo del reporte es responsabilidad del Implementer (y quedó también
+        persistido en `REPORT_FILENAME`); acá el orquestador solo le adosa la capa
+        de revisión que vive en el estado, para que el resultado impreso muestre
+        el ciclo generar→revisar completo.
+        """
+        report = state.subagent_results.get(
+            "implementer", "(el Implementer no produjo reporte)"
         )
-        researcher_result = state.subagent_results.get(
-            "researcher", "(el Researcher no produjo resultado)"
-        )
-        lines = [
-            "# Mini-reporte de análisis del repositorio",
-            "",
-            f"**Pedido:** {state.request}",
-            "",
-            "## Exploración (Explorer)",
-            "",
-            explorer_result,
-            "",
-            "## Investigación (Researcher)",
-            "",
-            researcher_result,
-        ]
+        lines = [report]
         if state.sources:
             lines += ["", "## Fuentes", ""]
             lines += [f"- {source}" for source in state.sources]
         if state.observations:
-            lines += ["", "## Observaciones", ""]
+            lines += ["", "## Revisión y observaciones", ""]
             lines += [f"- {obs}" for obs in state.observations]
         if state.missing_evidence:
             lines += ["", "## Falta de evidencia", ""]
             lines += [f"- {gap}" for gap in state.missing_evidence]
+        lines += ["", f"_Reporte persistido en `{REPORT_FILENAME}`._"]
         return "\n".join(lines)
