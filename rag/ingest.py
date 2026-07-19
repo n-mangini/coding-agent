@@ -84,7 +84,11 @@ def main():
         print("Error: RAG no disponible (¿falta instalar chromadb?).")
         raise SystemExit(1)
 
-    docs, chunks = ingest_path(store, sys.argv[1])
+    try:
+        docs, chunks = ingest_path(store, sys.argv[1])
+    except Exception as e:  # noqa: BLE001
+        print(f"Error: falló la ingesta RAG: {e}")
+        raise SystemExit(1) from None
     print(f"Ingesta completa: {docs} documento(s), {chunks} chunk(s). "
           f"Total en el índice: {store.count()}.")
 
