@@ -126,6 +126,16 @@ TOOL_SCHEMAS = [
 ]
 
 
+def schemas_for(names):
+    """Devuelve el subconjunto de TOOL_SCHEMAS cuyos nombres estén en `names`.
+
+    Cada subagente ve solo las tools que tiene permitidas; este helper mantiene
+    el esquema (lo que ve el LLM) en sincronía con su `tool_map` acotado.
+    """
+    wanted = set(names)
+    return [s for s in TOOL_SCHEMAS if s["function"]["name"] in wanted]
+
+
 def build_client(api_key):
     """Creates the OpenAI client."""
     return OpenAI(api_key=api_key)
