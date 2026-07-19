@@ -135,6 +135,8 @@ def _normalize_observations(raw_observations):
         return []
     observations = []
     for observation in raw_observations:
+        if observation is None:
+            continue
         text = str(observation).strip()
         if text:
             observations.append(text)
