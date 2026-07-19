@@ -40,12 +40,15 @@ RESEARCHER_SYSTEM_MESSAGE = (
 )
 
 
-def build_researcher(client, web_search):
+def build_researcher(client, web_search, policies=None):
     """Construye el subagente Researcher, acotado a `web_search`.
 
     Args:
         client: cliente OpenAI compartido.
         web_search: callable de búsqueda (real o el stub de `make_web_search`).
+        policies: set de políticas compartido. Todo Harness de producción las
+            recibe (invariante de #11): el rol lo da el `tool_map` acotado, las
+            policies son invariantes de seguridad globales iguales para todos.
     """
     tool_map = {"web_search": web_search}
     harness = Harness(
@@ -53,6 +56,7 @@ def build_researcher(client, web_search):
         tool_map,
         schemas_for(RESEARCHER_TOOLS),
         system_message=RESEARCHER_SYSTEM_MESSAGE,
+        policies=policies,
     )
     return Subagent(
         name="researcher",
