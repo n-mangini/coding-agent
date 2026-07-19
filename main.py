@@ -13,6 +13,7 @@ Comandos dentro del chat:
 import argparse
 
 from agent.factory import build_harness
+from agent.observability import observed_run
 from repo import clone_repo
 
 
@@ -80,25 +81,29 @@ def main():
             )
             continue
 
-        # Por defecto ejecutamos el mensaje tal cual. Plan mode solo cambia
-        # QUÉ input recibe el agente (le antepone el plan aprobado); por eso
-        # run_conversation se llama una sola vez, abajo, en ambos casos.
-        agent_input = user_input
-        if plan_mode_enabled:
-            approved_plan = harness.plan_mode_turn(user_input, conversation_history)
-            if approved_plan is None:
-                print("Task cancelled.")
-                continue
-            agent_input = (
-                f"{user_input}\n\n"
-                f"Follow this approved plan strictly:\n{approved_plan}"
-            )
+        # Una traza por turno de chat: agrupa TODO el trabajo del turno —la
+        # generación del plan (si Plan mode está activo) y la ejecución— para
+        # que la generation del planning también anide en la traza del turno.
+        with observed_run("chat-turn", user_input):
+            # Por defecto ejecutamos el mensaje tal cual. Plan mode solo cambia
+            # QUÉ input recibe el agente (le antepone el plan aprobado); por eso
+            # run_conversation se llama una sola vez, abajo, en ambos casos.
+            agent_input = user_input
+            if plan_mode_enabled:
+                approved_plan = harness.plan_mode_turn(user_input, conversation_history)
+                if approved_plan is None:
+                    print("Task cancelled.")
+                    continue
+                agent_input = (
+                    f"{user_input}\n\n"
+                    f"Follow this approved plan strictly:\n{approved_plan}"
+                )
 
-        final_response, conversation_history = harness.run_conversation(
-            agent_input,
-            conversation_history,
-            supervision_enabled=supervision_enabled,
-        )
+            final_response, conversation_history = harness.run_conversation(
+                agent_input,
+                conversation_history,
+                supervision_enabled=supervision_enabled,
+            )
 
         print(f"\nAgent: {final_response}")
 

@@ -2,3 +2,4 @@ openai
 tavily-python
 python-dotenv
 PyYAML
+langfuse

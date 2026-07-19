@@ -2,7 +2,7 @@
 
 import os
 
-from openai import OpenAI
+from .observability import build_openai_client
 
 MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
 
@@ -137,8 +137,12 @@ def schemas_for(names):
 
 
 def build_client(api_key):
-    """Creates the OpenAI client."""
-    return OpenAI(api_key=api_key)
+    """Creates the OpenAI client (instrumentado con Langfuse si hay credenciales).
+
+    La decisión de instrumentar vive en `observability.build_openai_client`; acá
+    seguimos teniendo el único borde con OpenAI, ahora observable sin tocar el loop.
+    """
+    return build_openai_client(api_key)
 
 
 def call_llm(client, messages, tools=TOOL_SCHEMAS, model=MODEL):

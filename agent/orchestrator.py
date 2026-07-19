@@ -7,6 +7,7 @@ Los próximos subagentes (Implementer, Reviewer, Tester, Researcher) se enchufan
 agregando pasos a `run`, sin cambiar esta estructura.
 """
 
+from .observability import observed_run
 from .state import TaskState
 from .subagents import extract_sources
 
@@ -33,8 +34,11 @@ class Orchestrator:
             tuple[str, TaskState]: el mini-reporte y el estado compartido final.
         """
         state = TaskState(request=request)
-        self._explore(state)
-        self._research(state)
+        # Traza raíz del caso de uso: las generations (turnos LLM) y los spans
+        # (tools) de todos los subagentes anidan dentro de una única traza.
+        with observed_run("analyze-repo", request):
+            self._explore(state)
+            self._research(state)
         return self._render_report(state), state
 
     def _explore(self, state):

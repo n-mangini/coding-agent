@@ -4,6 +4,7 @@ import inspect
 import json
 
 from .llm import PLANNING_SYSTEM_MESSAGE, SYSTEM_MESSAGE, call_llm
+from .observability import trace_tool
 
 
 class Harness:
@@ -102,7 +103,7 @@ class Harness:
                 print(f"\n❌ {content}")
             else:
                 print(f"\n🤖 Calling tool: {function_name} with args: {filtered_args}")
-                content = tool_function(**filtered_args)
+                content = trace_tool(function_name, tool_function, filtered_args)
                 print(f"Tool output: {content}")
 
         conversation_history.append(
