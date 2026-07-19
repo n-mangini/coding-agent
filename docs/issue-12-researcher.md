@@ -113,6 +113,21 @@ en #11:
    entre `build_harness` y `build_orchestrator`. Se extrajo a un helper —al lado
    de `_build_client_from_env`— usado por ambas, unificando de paso el mensaje.
 
+## Limitación conocida (aceptada, se resuelve en #8)
+
+El contrato de fuentes depende de que el LLM emita un formato exacto por línea
+(`FUENTE: <origen> | <referencia>`), y en la práctica **no lo cumple de forma
+consistente**: según la corrida lo envuelve como lista markdown (`- FUENTE: ...`),
+usa un encabezado plural (`FUENTES:`) con líneas peladas, o lo mete en prosa.
+Cuando el formato no matchea, `extract_sources` no recupera nada y el reporte cae
+al camino de "falta de evidencia" aunque sí hubiera fuentes.
+
+Se decidió **no tapar esto parseando** cada variante (sería un pozo sin fondo y
+código muerto ni bien cambie el modelo). La solución robusta es **salida
+estructurada** (que el Researcher devuelva las fuentes como JSON vía tool-call,
+no como texto libre), y se difiere a **#8**, donde el Researcher se rehace con
+RAG. Hasta entonces la atribución de fuentes es best-effort.
+
 ## En una frase
 
 Pasamos de *"un solo subagente que solo mira el repo"* a *"un pipeline de dos
