@@ -15,16 +15,19 @@ class Harness:
         client: cliente OpenAI.
         tool_map (dict): nombre de tool -> función Python.
         tool_schemas (list): esquema de tools en formato OpenAI (lo que ve el LLM).
+        system_message (str): prompt de sistema. Cada subagente pasa el suyo para
+            especializarse reusando el mismo motor; por defecto, el genérico.
     """
 
-    def __init__(self, client, tool_map, tool_schemas):
+    def __init__(self, client, tool_map, tool_schemas, system_message=SYSTEM_MESSAGE):
         self.client = client
         self.tool_map = tool_map
         self.tool_schemas = tool_schemas
+        self.system_message = system_message
 
     def new_conversation(self):
         """Devuelve un historial nuevo, ya sembrado con el mensaje `system`."""
-        return [{"role": "system", "content": SYSTEM_MESSAGE}]
+        return [{"role": "system", "content": self.system_message}]
 
     # ---------------------------------------------------------------- loop
     def run_conversation(
