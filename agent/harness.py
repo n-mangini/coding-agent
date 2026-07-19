@@ -1,10 +1,9 @@
-"""Harness del agente: loop de orquestación, Plan Mode y Supervisión.
-"""
+"""Harness del agente: loop de orquestación, Plan Mode y Supervisión."""
 
 import inspect
 import json
 
-from .llm import MODEL, PLANNING_SYSTEM_MESSAGE, SYSTEM_MESSAGE, call_llm
+from .llm import PLANNING_SYSTEM_MESSAGE, SYSTEM_MESSAGE, call_llm
 
 WRITE_TOOLS = {"write_file", "execute_command"}
 
@@ -161,14 +160,10 @@ class Harness:
             + [{"role": "user", "content": request}]
         )
 
-        try:
-            response = self.client.chat.completions.create(
-                model=MODEL,
-                messages=planning_messages,
-            )
-            return response.choices[0].message.content, None
-        except Exception as e:  # noqa: BLE001
-            return None, f"Error generating plan: {e}"
+        message, error = call_llm(self.client, planning_messages, tools=None)
+        if error:
+            return None, error
+        return message.content, None
 
 def _planning_history(conversation_history):
     """Deja solo turnos de texto user/assistant; descarta system/tool y

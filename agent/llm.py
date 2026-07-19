@@ -1,7 +1,4 @@
-"""Cliente LLM, system prompt y esquema de tools en formato OpenAI.
-
-Migrado desde el notebook del TP1 (celdas 3 y 16).
-"""
+"""Cliente LLM, system prompt y esquema de tools en formato OpenAI."""
 
 import os
 
@@ -135,14 +132,17 @@ def build_client(api_key):
 
 
 def call_llm(client, messages, tools=TOOLS, model=MODEL):
-    """Single LLM turn. Returns (message, error)."""
+    """Single LLM turn. Returns (message, error).
+
+    Con `tools=None` se llama al modelo sin herramientas (p. ej. Plan Mode,
+    donde el LLM solo debe devolver texto).
+    """
+    params = {"model": model, "messages": messages}
+    if tools is not None:
+        params["tools"] = tools
+        params["tool_choice"] = "auto"
     try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            tools=tools,
-            tool_choice="auto",
-        )
+        response = client.chat.completions.create(**params)
         return response.choices[0].message, None
     except Exception as e:  # noqa: BLE001
         return None, f"Error calling LLM: {e}"
