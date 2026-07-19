@@ -1,7 +1,5 @@
 """Herramientas que el agente puede invocar.
-
 Cinco tools: read_file, list_files, write_file, execute_command, web_search.
-Migradas desde el notebook del TP1 (celdas 10-14).
 """
 
 import os
@@ -28,7 +26,6 @@ def read_file(file_path):
     except Exception as e:  # noqa: BLE001
         return f"Error reading file {file_path}: {e}"
 
-
 def list_files(path="."):
     """Lists files and directories in the specified path.
 
@@ -53,7 +50,6 @@ def list_files(path="."):
     except Exception as e:  # noqa: BLE001
         return f"Error listing files in {path}: {e}"
 
-
 def write_file(file_path, content):
     """Writes content to a file, overwriting existing content if it exists.
 
@@ -70,7 +66,6 @@ def write_file(file_path, content):
         return f"Successfully wrote to {file_path}"
     except Exception as e:  # noqa: BLE001
         return f"Error writing to file {file_path}: {e}"
-
 
 def execute_command(command):
     """Executes a shell command and returns its stdout and stderr.
@@ -93,7 +88,6 @@ def execute_command(command):
         )
     except Exception as e:  # noqa: BLE001
         return f"Error executing command '{command}': {e}"
-
 
 def make_web_search(tavily_api_key):
     """Builds a web_search tool bound to a Tavily client.
