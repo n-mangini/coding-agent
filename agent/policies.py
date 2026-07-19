@@ -82,8 +82,9 @@ def _matches(normalized, raw, pattern):
 
 
 def _normalize(target):
-    """Normaliza separadores y `./` para que los patrones de ruta sean estables."""
-    return str(target).replace("\\", "/").lstrip("./")
+    """Normaliza separadores y un prefijo `./` para que los patrones de ruta sean estables."""
+    normalized = str(target).replace("\\", "/")
+    return normalized[2:] if normalized.startswith("./") else normalized
 
 
 def load_policies(config_path=_DEFAULT_CONFIG_PATH):
