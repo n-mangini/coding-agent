@@ -51,29 +51,32 @@ class Orchestrator:
         self.explorer.run(task, state)
 
     def _research(self, state):
-        """Paso 2: el Researcher busca en la web lo que la exploración no cubre.
+        """Paso 2: el Researcher cubre la falta de evidencia (RAG primero, web después).
 
         Registra las fuentes recuperadas (con su origen) en el estado. Si no se
-        recuperó ninguna fuente web, lo anota como falta de evidencia — cubre el
-        caso del stub sin TAVILY_API_KEY sin tratamiento especial.
+        recuperó evidencia externa (ni RAG ni web), lo anota como falta de
+        evidencia — cubre el caso del índice vacío o del stub sin TAVILY_API_KEY
+        sin tratamiento especial.
         """
         explorer_result = state.subagent_results.get("explorer", "")
         task = (
             "A partir del pedido del usuario y de lo que ya se sabe del repo, "
-            "identificá qué falta de evidencia queda y buscá en la web para "
-            "cubrirla. Citá fuentes y marcá su origen (web / inferencia).\n\n"
+            "identificá qué falta de evidencia queda. Consultá PRIMERO el índice "
+            "RAG con retrieve y solo caé a web_search si el RAG no alcanza. Citá "
+            "fuentes y marcá su origen (repo / memoria / rag / web / inferencia).\n\n"
             f"Pedido del usuario: {state.request}\n\n"
             f"Lo que ya se sabe del repo (Explorer):\n{explorer_result}"
         )
         result = self.researcher.run(task, state)
 
-        sources = extract_sources(result)
+        sources = extract_sources(self.researcher)
         for origin, reference in sources:
             state.record_source(f"{reference} (origen: {origin})")
-        if not any(origin == "web" for origin, _ in sources):
+        external_origins = {"rag", "web"}
+        if not any(origin in external_origins for origin, _ in sources):
             state.record_missing_evidence(
-                "El Researcher no recuperó evidencia web "
-                "(posible stub sin TAVILY_API_KEY): la respuesta se apoya en inferencia."
+                "El Researcher no recuperó evidencia externa (RAG vacío/sin chromadb "
+                "y/o web_search stub sin TAVILY_API_KEY): la respuesta se apoya en inferencia."
             )
 
     def _render_report(self, state):

@@ -3,3 +3,4 @@ tavily-python
 python-dotenv
 PyYAML
 langfuse
+chromadb

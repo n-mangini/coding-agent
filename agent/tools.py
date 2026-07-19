@@ -1,6 +1,11 @@
 """Herramientas que el agente puede invocar.
-Cinco tools: read_file, list_files, write_file, execute_command, web_search.
+Seis tools: read_file, list_files, write_file, execute_command, web_search,
+retrieve.
 """
+
+# Prefijo que `retrieve` emite por cada chunk para que el Researcher pueda
+# transferir la fuente RAG al JSON estructurado de `submit_research_result`.
+RAG_SOURCE_PREFIX = "FUENTE_RAG:"
 
 import os
 import subprocess
@@ -88,6 +93,47 @@ def execute_command(command):
         )
     except Exception as e:  # noqa: BLE001
         return f"Error executing command '{command}': {e}"
+
+def make_retrieve(rag_store):
+    """Builds the retrieve tool bound to a RAG store (Chroma).
+
+    Returns a callable `retrieve(query, k)`. Si no hay store disponible (por
+    ejemplo, `chromadb` no instalado), devuelve un stub que avisa que el RAG no
+    está disponible, para que el harness siga funcionando (mismo patrón que
+    `make_web_search`). El Researcher lo consulta primero y cae a `web_search`
+    solo si esto no trae evidencia.
+    """
+    if rag_store is None:
+        def retrieve(query, k=4):  # noqa: ARG001
+            return "Error: retrieve unavailable (RAG store no disponible; ¿falta chromadb o ingesta?)."
+
+        return retrieve
+
+    def retrieve(query, k=4):
+        """Recupera chunks del índice RAG (Chroma) más similares a la consulta.
+
+        Args:
+            query (str): la consulta en lenguaje natural.
+            k (int): cuántos chunks devolver.
+
+        Returns:
+            str: un bloque por chunk, cada uno encabezado por su fuente RAG, o un
+            aviso de que el índice no tiene evidencia (para disparar el fallback).
+        """
+        try:
+            hits = rag_store.query(query, k=k)
+        except Exception as e:  # noqa: BLE001 — el error vuelve al LLM como contenido.
+            return f"Error performing retrieval: {e}"
+        if not hits:
+            return "Sin resultados en el índice RAG (el índice está vacío o no hay evidencia)."
+        blocks = [
+            f"{RAG_SOURCE_PREFIX} {hit['source']} (distancia {hit['distance']:.4f})\n{hit['text']}"
+            for hit in hits
+        ]
+        return "\n\n".join(blocks)
+
+    return retrieve
+
 
 def make_web_search(tavily_api_key):
     """Builds a web_search tool bound to a Tavily client.
