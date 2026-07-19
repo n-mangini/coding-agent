@@ -93,6 +93,19 @@ ajustes:
    `Error: ...` como string), se aclaró que el error de tool viaja en el output y
    que el span solo capturaría una excepción inesperada.
 
+## Evidencia: una traza real
+
+Corrida de `analyze.py "Qué hace este repo..."` con credenciales de Langfuse
+presentes, vista en el dashboard:
+
+![Traza analyze-repo en Langfuse: la traza raíz agent "analyze-repo" contiene una OpenAI-generation (6/6) de la que cuelgan los spans de tools web_search, list_files (2/2) y read_file (3/3)](assets/langfuse-analyze-repo.png)
+
+Se ve la estructura de anidamiento que arma la instrumentación: la traza raíz
+`analyze-repo` (abierta por `observed_run`), la `OpenAI-generation` con sus 6
+turnos LLM (cada uno vía `call_llm` / el cliente instrumentado), y colgando de
+ella los `span` de tools —`read_file` (3 veces), `list_files` (2) y
+`web_search`— cada uno registrado por `trace_tool`.
+
 ## En una frase
 
 Pasamos de *"una caja negra con `print`s"* a *"cada turno LLM y cada tool trazados
