@@ -9,7 +9,7 @@ from .harness import Harness
 from .llm import TOOL_SCHEMAS, build_client
 from .orchestrator import Orchestrator
 from .policies import load_policies
-from .subagents import build_explorer
+from .subagents import build_explorer, build_researcher
 
 
 def _build_client_from_env():
@@ -23,17 +23,31 @@ def _build_client_from_env():
     return build_client(api_key)
 
 
+def _build_web_search_from_env():
+    """Lee TAVILY_API_KEY del entorno y arma la tool web_search (stub si falta)."""
+    tavily_api_key = os.getenv("TAVILY_API_KEY")
+    if tavily_api_key:
+        print("Using Tavily API key from environment.")
+    else:
+        print("TAVILY_API_KEY not set — web_search will be unavailable (stub).")
+    return tools_module.make_web_search(tavily_api_key)
+
+
 def build_orchestrator():
     """Construye el orquestador multi-agente (agente principal + subagentes).
 
-    Es el punto de entrada del caso de uso "analizar un repo → reporte". En el
-    walking skeleton solo cablea el Explorer; los próximos subagentes se suman
-    acá y en `Orchestrator`.
+    Es el punto de entrada del caso de uso "analizar un repo → reporte". Cablea
+    el Explorer y el Researcher; los próximos subagentes se suman acá y en
+    `Orchestrator`. Todos los subagentes reciben el mismo set de policies: el rol
+    lo da el `tool_map` acotado, las policies son invariantes de seguridad
+    globales iguales para todos.
     """
     client = _build_client_from_env()
     policies = load_policies()
+    web_search = _build_web_search_from_env()
     explorer = build_explorer(client, policies)
-    return Orchestrator(explorer)
+    researcher = build_researcher(client, web_search, policies)
+    return Orchestrator(explorer, researcher)
 
 
 def build_harness():
@@ -43,14 +57,7 @@ def build_harness():
     desde el entorno o un archivo .env. Si falta la de OpenAI, la pide por stdin.
     """
     client = _build_client_from_env()
-
-    tavily_api_key = os.getenv("TAVILY_API_KEY")
-    if tavily_api_key:
-        print("Using Tavily API key from environment.")
-    else:
-        print("TAVILY_API_KEY not set — web_search will be unavailable.")
-
-    web_search = tools_module.make_web_search(tavily_api_key)
+    web_search = _build_web_search_from_env()
 
     tool_map = {
         "read_file": tools_module.read_file,
