@@ -1,12 +1,10 @@
 """Harness del agente: loop de orquestación, Plan Mode y Supervisión.
-
-Migrado desde el notebook del TP1 (celdas 17 y 19).
 """
 
 import inspect
 import json
 
-from .llm import MODEL, SYSTEM_MESSAGE, call_llm
+from .llm import MODEL, PLANNING_SYSTEM_MESSAGE, SYSTEM_MESSAGE, call_llm
 
 WRITE_TOOLS = {"write_file", "execute_command"}
 
@@ -120,16 +118,34 @@ class Harness:
         return decision in ("yes", "y")
 
     # ----------------------------------------------------------- plan mode
+    def plan_mode_turn(self, user_message, conversation_history):
+        """Genera un plan, lo muestra y lo itera con feedback del usuario."""
+        feedback = None
+        while True:
+            plan, error = self.generate_plan(
+                user_message, conversation_history, feedback=feedback
+            )
+
+            if error:
+                print(error)
+                return None
+
+            print("\n📋 Proposed plan:")
+            print(plan)
+
+            decision = input(
+                "\nApprove? (yes = run / cancel = abort / anything else = "
+                "feedback to revise): "
+            ).strip()
+
+            if decision.lower() in ("yes", "y", "approve", "ok"):
+                return plan
+            if decision.lower() == "cancel":
+                return None
+            feedback = decision
+
     def generate_plan(self, user_message, conversation_history, feedback=None):
         """Pide al LLM un plan paso a paso (sin llamar tools)."""
-        planning_system = (
-            "You are in PLAN MODE. Do NOT call any tools. "
-            "Given the user's request, output a concise, numbered step-by-step plan "
-            "describing which tools you would use (read_file, write_file, "
-            "list_files, execute_command, web_search) and why. Keep it short and "
-            "concrete. Output only the plan text, nothing else."
-        )
-
         prior = _planning_history(conversation_history)
         request = (
             user_message
@@ -140,7 +156,7 @@ class Harness:
             )
         )
         planning_messages = (
-            [{"role": "system", "content": planning_system}]
+            [{"role": "system", "content": PLANNING_SYSTEM_MESSAGE}]
             + prior
             + [{"role": "user", "content": request}]
         )
@@ -153,29 +169,6 @@ class Harness:
             return response.choices[0].message.content, None
         except Exception as e:  # noqa: BLE001
             return None, f"Error generating plan: {e}"
-
-    def plan_mode_turn(self, user_message, conversation_history):
-        """Genera un plan, lo muestra y lo itera con feedback del usuario."""
-        feedback = None
-        while True:
-            plan, error = self.generate_plan(
-                user_message, conversation_history, feedback=feedback
-            )
-            if error:
-                print(error)
-                return None
-            print("\n📋 Proposed plan:")
-            print(plan)
-            decision = input(
-                "\nApprove? (yes = run / cancel = abort / anything else = "
-                "feedback to revise): "
-            ).strip()
-            if decision.lower() in ("yes", "y", "approve", "ok"):
-                return plan
-            if decision.lower() == "cancel":
-                return None
-            feedback = decision
-
 
 def _planning_history(conversation_history):
     """Deja solo turnos de texto user/assistant; descarta system/tool y

@@ -23,6 +23,14 @@ SYSTEM_MESSAGE = (
     "If it doesn't, create it using appropriate tools."
 )
 
+PLANNING_SYSTEM_MESSAGE = (
+    "You are in PLAN MODE. Do NOT call any tools. "
+    "Given the user's request, output a concise, numbered step-by-step plan "
+    "describing which tools you would use (read_file, write_file, "
+    "list_files, execute_command, web_search) and why. Keep it short and "
+    "concrete. Output only the plan text, nothing else."
+)
+
 TOOLS = [
     {
         "type": "function",
