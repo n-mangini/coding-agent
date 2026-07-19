@@ -1,7 +1,5 @@
 """Chat interactivo con el coding agent.
 
-Reemplaza la celda de pruebas manuales del notebook (celda 23).
-
 Uso:
     python main.py                 # solo el workspace local
     python main.py --clone URL     # clona un repo y hace chdir antes del chat
