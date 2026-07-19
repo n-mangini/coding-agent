@@ -36,6 +36,14 @@ class TaskState:
         """Guarda el resultado final de un subagente bajo su nombre."""
         self.subagent_results[agent_name] = result
 
-    def add_observation(self, note):
-        """Anota una observación transversal."""
+    def record_source(self, source):
+        """Registra una fuente consultada (repo/RAG/web/...); la usa el Researcher."""
+        self.sources.append(source)
+
+    def record_modified_file(self, path):
+        """Registra un archivo escrito/modificado durante la tarea."""
+        self.modified_files.append(path)
+
+    def record_observation(self, note):
+        """Anota una observación transversal (dudas, riesgos, falta de evidencia)."""
         self.observations.append(note)
