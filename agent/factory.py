@@ -12,7 +12,12 @@ from .llm import TOOL_SCHEMAS, build_client
 from .memory import load_project_memory, make_memory_tools
 from .orchestrator import Orchestrator
 from .policies import load_policies
-from .subagents import build_explorer, build_researcher
+from .subagents import (
+    build_explorer,
+    build_implementer,
+    build_researcher,
+    build_reviewer,
+)
 
 
 def _build_client_from_env():
@@ -51,10 +56,10 @@ def build_orchestrator():
     """Construye el orquestador multi-agente (agente principal + subagentes).
 
     Es el punto de entrada del caso de uso "analizar un repo → reporte". Cablea
-    el Explorer y el Researcher; los próximos subagentes se suman acá y en
-    `Orchestrator`. Todos los subagentes reciben el mismo set de policies: el rol
-    lo da el `tool_map` acotado, las policies son invariantes de seguridad
-    globales iguales para todos.
+    el Explorer, el Researcher, el Implementer y el Reviewer; los próximos
+    subagentes se suman acá y en `Orchestrator`. Todos los subagentes reciben el
+    mismo set de policies: el rol lo da el `tool_map` acotado, las policies son
+    invariantes de seguridad globales iguales para todos.
     """
     client = _build_client_from_env()
     policies = load_policies()
@@ -65,7 +70,9 @@ def build_orchestrator():
     memory_tools = make_memory_tools(load_project_memory())
     explorer = build_explorer(client, policies, memory_tools)
     researcher = build_researcher(client, retrieve, web_search, policies)
-    return Orchestrator(explorer, researcher)
+    implementer = build_implementer(client, policies)
+    reviewer = build_reviewer(client, policies)
+    return Orchestrator(explorer, researcher, implementer, reviewer)
 
 
 def build_harness():

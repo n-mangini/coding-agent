@@ -3,9 +3,10 @@
 Toma el material crudo que dejaron los pasos previos en el `TaskState` (lo que
 exploró el Explorer y lo que investigó el Researcher) y lo redacta como un
 reporte coherente que responde al pedido original. Su `tool_map` está acotado a
-ESCRITURA (`write_file`): no lee el repo ni ejecuta comandos, porque su insumo ya
-está en el estado. Escribe el reporte en un archivo fijo (`REPORT_FILENAME`) para
-que quede como artefacto verificable y para que el Reviewer pueda leerlo.
+ESCRITURA acotada (`write_file` envuelta para aceptar solo `REPORT_FILENAME`):
+no lee el repo ni ejecuta comandos, porque su insumo ya está en el estado.
+Escribe el reporte en un archivo fijo para que quede como artefacto verificable
+y para que el Reviewer pueda leerlo.
 """
 
 from .. import tools as tools_module
@@ -39,14 +40,23 @@ IMPLEMENTER_SYSTEM_MESSAGE = (
 
 
 def build_implementer(client, policies=None):
-    """Construye el subagente Implementer, acotado a `write_file`.
+    """Construye el subagente Implementer, acotado a escribir el reporte.
 
     Args:
         client: cliente OpenAI compartido.
         policies: set de políticas compartido (invariante de #11: todo Harness de
             producción las recibe; el rol lo da el `tool_map` acotado).
     """
-    tool_map = {"write_file": tools_module.write_file}
+
+    def write_report(file_path, content):
+        if file_path != REPORT_FILENAME:
+            return (
+                f"Error: el Implementer solo puede escribir '{REPORT_FILENAME}', "
+                f"no '{file_path}'."
+            )
+        return tools_module.write_file(file_path, content)
+
+    tool_map = {"write_file": write_report}
     harness = Harness(
         client,
         tool_map,
