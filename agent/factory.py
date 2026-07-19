@@ -8,6 +8,7 @@ from . import tools as tools_module
 from .harness import Harness
 from .llm import TOOL_SCHEMAS, build_client
 from .orchestrator import Orchestrator
+from .policies import load_policies
 from .subagents import build_explorer
 
 
@@ -30,7 +31,8 @@ def build_orchestrator():
     acá y en `Orchestrator`.
     """
     client = _build_client_from_env()
-    explorer = build_explorer(client)
+    policies = load_policies()
+    explorer = build_explorer(client, policies)
     return Orchestrator(explorer)
 
 
@@ -58,4 +60,4 @@ def build_harness():
         "web_search": web_search,
     }
 
-    return Harness(client, tool_map, TOOL_SCHEMAS)
+    return Harness(client, tool_map, TOOL_SCHEMAS, policies=load_policies())

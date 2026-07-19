@@ -5,8 +5,6 @@ import json
 
 from .llm import PLANNING_SYSTEM_MESSAGE, SYSTEM_MESSAGE, call_llm
 
-WRITE_TOOLS = {"write_file", "execute_command"}
-
 
 class Harness:
     """Orquesta la conversación con el LLM y la ejecución de tools.
@@ -17,13 +15,23 @@ class Harness:
         tool_schemas (list): esquema de tools en formato OpenAI (lo que ve el LLM).
         system_message (str): prompt de sistema. Cada subagente pasa el suyo para
             especializarse reusando el mismo motor; por defecto, el genérico.
+        policies (Policies | None): capa de políticas consultada antes de cada
+            tool call. Si es None, no hay gate por config (comportamiento previo).
     """
 
-    def __init__(self, client, tool_map, tool_schemas, system_message=SYSTEM_MESSAGE):
+    def __init__(
+        self,
+        client,
+        tool_map,
+        tool_schemas,
+        system_message=SYSTEM_MESSAGE,
+        policies=None,
+    ):
         self.client = client
         self.tool_map = tool_map
         self.tool_schemas = tool_schemas
         self.system_message = system_message
+        self.policies = policies
 
     def new_conversation(self):
         """Devuelve un historial nuevo, ya sembrado con el mensaje `system`."""
@@ -73,6 +81,11 @@ class Harness:
         if function_name not in self.tool_map:
             content = f"Error: Tool '{function_name}' not found."
             print(content)
+        elif (policy := self._policy_denial(function_name, function_args)) is not None:
+            # El gate de políticas corre primero: es un veto por config, previo a
+            # la supervisión humana. El motivo vuelve al LLM como contenido.
+            content = policy
+            print(f"\n🚫 {content}")
         else:
             tool_function = self.tool_map[function_name]
             sig = inspect.signature(tool_function)
@@ -81,8 +94,7 @@ class Harness:
             }
 
             denied = (
-                supervision_enabled
-                and function_name in WRITE_TOOLS
+                self._needs_confirmation(function_name, supervision_enabled)
                 and not self._confirm_action(function_name, filtered_args)
             )
             if denied:
@@ -101,6 +113,21 @@ class Harness:
                 "content": content,
             }
         )
+
+    # ------------------------------------------------------------ policies
+    def _policy_denial(self, tool_name, args):
+        """Devuelve el motivo de bloqueo por política, o None si se permite."""
+        if self.policies is None:
+            return None
+        allowed, reason = self.policies.check(tool_name, args)
+        return None if allowed else reason
+
+    def _needs_confirmation(self, tool_name, supervision_enabled):
+        """Con Supervisión activa, la lista `approval` de la config define qué tools
+        piden confirmación humana. Sin policies o sin supervisión, no se pide nada."""
+        if not supervision_enabled or self.policies is None:
+            return False
+        return self.policies.requires_approval(tool_name)
 
     # -------------------------------------------------------- supervision
     def _confirm_action(self, tool_name, args):

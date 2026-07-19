@@ -28,7 +28,7 @@ EXPLORER_SYSTEM_MESSAGE = (
 )
 
 
-def build_explorer(client):
+def build_explorer(client, policies=None):
     """Construye el subagente Explorer con permisos de solo lectura."""
     tool_map = {
         "read_file": tools_module.read_file,
@@ -39,6 +39,7 @@ def build_explorer(client):
         tool_map,
         schemas_for(EXPLORER_TOOLS),
         system_message=EXPLORER_SYSTEM_MESSAGE,
+        policies=policies,
     )
     return Subagent(
         name="explorer",
