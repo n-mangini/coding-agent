@@ -17,18 +17,6 @@ Pedido ejecutado:
 Analiza arquitectura, dependencias, riesgos y comandos
 ```
 
-Trace ID:
-
-```text
-0ea16ca27d06350f0188d59aeeb489d9
-```
-
-Archivo exportado:
-
-```text
-trace-0ea16ca27d06350f0188d59aeeb489d9 (1).json
-```
-
 Esta nueva traza es mas completa para la consigna porque incluye tanto
 recuperacion RAG como busqueda web.
 
@@ -95,78 +83,11 @@ invoca una tool, recibe el resultado y continua con la siguiente decision.
 La tercera captura muestra la traza en formato timeline. Esta vista permite ver
 cuanto tarda cada paso y como se distribuyen las llamadas durante la ejecucion.
 
-En la parte superior se observa la duracion total:
-
-```text
-49.31 s
-```
-
-y el costo total estimado:
-
-```text
-USD 0.123513
-```
-
 La linea de tiempo muestra que las tools locales, como `read_file`, `list_files`,
 `write_file` y `execute_command`, son muy rapidas. En cambio, la mayor parte del
 tiempo y del costo se concentra en las generaciones `OpenAI-generation`. Tambien
 se observa la llamada `OpenAI-embedding` asociada a `retrieve`, que corresponde a
 la consulta sobre la base RAG.
-
-## Metricas principales del trace
-
-Del JSON exportado se obtuvieron las siguientes metricas:
-
-| Metrica | Valor |
-|---|---:|
-| Observaciones totales | 49 |
-| Agentes raiz | 1 |
-| Generaciones OpenAI | 24 |
-| Tools ejecutadas | 23 |
-| Embeddings OpenAI | 1 |
-| Duracion total | 49.311 s |
-| Tokens totales aproximados | 52.805 |
-| Costo total aproximado | USD 0.123513 |
-
-Distribucion por nombre de observacion:
-
-| Observacion | Cantidad |
-|---|---:|
-| `OpenAI-generation` | 24 |
-| `read_file` | 11 |
-| `list_files` | 5 |
-| `read_memory` | 1 |
-| `retrieve` | 1 |
-| `OpenAI-embedding` | 1 |
-| `web_search` | 1 |
-| `submit_research_result` | 1 |
-| `write_file` | 1 |
-| `execute_command` | 1 |
-| `submit_review_result` | 1 |
-| `analyze-repo` | 1 |
-
-## Cobertura de los puntos requeridos
-
-La consigna pide registrar prompts, modelo, llamadas al LLM, tools, documentos
-recuperados, busquedas web, iteraciones, errores, latencia, tokens, costo
-estimado y resultado final.
-
-En esta traza se observa:
-
-| Punto requerido | Estado | Evidencia en Langfuse |
-|---|---|---|
-| Prompts | Registrado | En `input.messages` de cada `OpenAI-generation` |
-| Modelo utilizado | Registrado | `model: gpt-4o-2024-08-06` |
-| Llamadas al LLM | Registrado | 24 eventos `OpenAI-generation` |
-| Tools invocadas | Registrado | 23 eventos `TOOL` |
-| Documentos recuperados | Registrado | `retrieve` devuelve chunks RAG con `FUENTE_RAG` |
-| Busquedas web | Registrado | Evento `web_search` con resultados de Tavily |
-| Iteraciones | Registrado | Secuencia generation -> tool -> generation en el grafo expandido |
-| Errores | Registrado si ocurren | No se observan errores criticos en esta ejecucion |
-| Latencia | Registrado | `latency` por observacion y total de 49.311 s |
-| Tokens | Registrado | `usageDetails`, total aproximado 52.805 |
-| Costo estimado | Registrado | `costDetails`, total aproximado USD 0.123513 |
-| Resultado final | Registrado | Output del Reviewer y observaciones finales |
 
 ## Documentos y fuentes recuperadas
 
@@ -248,13 +169,3 @@ Observaciones principales del Reviewer:
 - La carpeta `.github/workflows` confirma uso de GitHub Actions para testing y
   releases automatizados.
 
-## Conclusion
-
-La traza de Langfuse demuestra una ejecucion completa del caso de uso
-`analyze-repo`. Se observan prompts, modelo, llamadas al LLM, tools invocadas,
-documentos recuperados por RAG, busqueda web, iteraciones, latencia, tokens,
-costo estimado, check tecnico y resultado final.
-
-Con esta evidencia se cumple el punto 7 del trabajo: hay capturas de pantalla de
-la herramienta de observabilidad y una traza completa que permite auditar el
-comportamiento del agente de punta a punta.
