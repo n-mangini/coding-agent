@@ -2,157 +2,154 @@
 
 ## Descripcion breve
 
-El caso de uso elegido es un **coding agent multiagente para analizar
-repositorios de software y generar un reporte tecnico verificable**.
+El caso de uso elegido fue utilizar el sistema multiagente del proyecto
+`coding-agent` para analizar un repositorio externo y generar un reporte tecnico
+verificable.
 
-El sistema recibe un pedido en lenguaje natural, explora el repositorio actual o
-un repositorio clonado desde GitHub, recupera evidencia local o externa, redacta
-un reporte, ejecuta una validacion tecnica acotada y revisa si el resultado final
-responde al pedido original.
-
-El proyecto utilizado es este repositorio `coding-agent`, migrado desde un
-notebook inicial del TP a una aplicacion Python ejecutable. Sobre la base de un
-agente de coding con tools se construyo una capa multiagente orientada al caso:
+La ejecucion concreta se hizo sobre el repositorio:
 
 ```text
-analizar un repo desconocido -> producir un reporte tecnico
+pypa/sampleproject
 ```
 
-## Repositorio o proyecto utilizado
+Ese repositorio es un proyecto de ejemplo de la Python Packaging Authority
+orientado a mostrar como empaquetar y distribuir proyectos Python. Segun el
+reporte generado, su objetivo no es representar todas las mejores practicas de
+desarrollo Python, sino servir como guia de ejemplo para el tutorial de
+empaquetado de Python.
 
-El proyecto utilizado es `coding-agent`.
-
-Su objetivo general es implementar un agente capaz de:
-
-- Leer archivos del repositorio.
-- Listar estructura de carpetas.
-- Escribir archivos de salida.
-- Ejecutar comandos controlados.
-- Consultar una base RAG local.
-- Usar busqueda web como fallback.
-- Mantener memoria persistente del proyecto.
-- Registrar trazas de ejecucion con Langfuse cuando esta configurado.
-
-El caso de uso principal se ejecuta desde:
-
-```bash
-python analyze.py
-```
-
-Tambien puede analizarse un repositorio externo:
-
-```bash
-python analyze.py --clone https://github.com/usuario/repositorio.git
-```
-
-## Objetivo concreto
-
-El objetivo concreto del caso de uso es que el sistema pueda tomar un repositorio
-y producir automaticamente un reporte de analisis que incluya, como minimo:
-
-- Que es el proyecto analizado.
-- Como esta organizada su estructura.
-- Que dependencias usa.
-- Que convenciones o patrones aparecen en el codigo.
-- Que fuentes o evidencia se utilizaron.
-- Que validacion tecnica se ejecuto.
-- Que observaciones surgieron en la revision final.
-
-El reporte final se persiste en:
+El resultado de la ejecucion quedo documentado en:
 
 ```text
 REPORTE-ANALISIS.md
 ```
 
-## Flujo esperado
+## Proyecto utilizado
 
-El flujo del caso de uso es:
+El proyecto utilizado como caso de analisis fue:
 
-1. El usuario ejecuta `analyze.py` con un pedido en lenguaje natural.
-2. El orquestador crea un estado compartido de la tarea.
-3. El subagente Explorer inspecciona el repositorio en modo solo lectura.
-4. El subagente Researcher busca evidencia adicional, primero en RAG y luego en
-   web si hace falta.
-5. El subagente Implementer redacta y guarda el reporte.
-6. El subagente Tester ejecuta un check tecnico acotado.
-7. El subagente Reviewer valida que el reporte responda al pedido original.
-8. El orquestador devuelve el reporte final con fuentes, checks y observaciones.
+```text
+https://github.com/pypa/sampleproject
+```
+
+Este repositorio fue elegido porque es pequeno, conocido y adecuado para validar
+si el agente puede:
+
+- clonar o trabajar sobre un repositorio externo;
+- explorar su estructura;
+- identificar su objetivo;
+- relevar dependencias;
+- reconocer convenciones;
+- recuperar fuentes;
+- generar un reporte final en Markdown.
+
+## Objetivo concreto
+
+El objetivo concreto fue comprobar que el agente pudiera analizar un repositorio
+Python de ejemplo y producir un reporte que respondiera preguntas basicas de
+entendimiento tecnico:
+
+- que es el repositorio;
+- para que sirve;
+- como esta organizado;
+- que dependencias o componentes relevantes utiliza;
+- que convenciones se observan;
+- que fuentes respaldan el analisis.
+
+El artefacto esperado era un reporte persistido en:
+
+```text
+REPORTE-ANALISIS.md
+```
 
 ## Diagrama del caso de uso
 
 ```mermaid
 flowchart TD
     U["Usuario"] --> A["analyze.py"]
-    A --> O["Orquestador"]
-    O --> S["TaskState<br/>estado compartido"]
-    O --> E["Explorer<br/>explora el repo"]
-    E --> S
-    O --> R["Researcher<br/>busca evidencia"]
-    R --> G["RAG local<br/>Chroma + embeddings"]
-    R --> W["Web search<br/>fallback opcional"]
-    R --> S
+    A --> R["Repositorio externo<br/>pypa/sampleproject"]
+    A --> O["Orchestrator<br/>agente principal"]
+
+    O --> E["Explorer<br/>analiza estructura"]
+    E --> S["TaskState<br/>estado compartido"]
+
+    O --> Q["Researcher<br/>busca evidencia"]
+    Q --> S
+
     O --> I["Implementer<br/>redacta reporte"]
     I --> F["REPORTE-ANALISIS.md"]
     I --> S
-    O --> T["Tester<br/>ejecuta check acotado"]
+
+    O --> T["Tester<br/>validacion acotada"]
     T --> S
-    O --> V["Reviewer<br/>valida resultado"]
+
+    O --> V["Reviewer<br/>revision final"]
     V --> S
-    S --> RF["Reporte final<br/>fuentes, checks y observaciones"]
+
+    S --> OUT["Reporte final<br/>resumen, estructura, dependencias, convenciones y fuentes"]
 ```
 
-El diagrama muestra el flujo completo del caso de uso. El usuario inicia la
-ejecucion desde `analyze.py`, que construye el orquestador. El orquestador
-coordina a los subagentes y todos registran sus resultados en `TaskState`, el
-estado compartido de la tarea. El Researcher consulta primero la base RAG local
-y solo usa web como fallback. El Implementer genera `REPORTE-ANALISIS.md`, el
-Tester ejecuta una validacion acotada y el Reviewer revisa que el reporte
-responda al pedido original. Finalmente, el sistema devuelve un reporte con
-fuentes, checks y observaciones.
+El diagrama muestra la ejecucion del caso de uso: el usuario inicia `analyze.py`
+sobre el repositorio `pypa/sampleproject`; el orquestador coordina subagentes
+especializados; cada paso registra resultados en `TaskState`; y el resultado se
+materializa en el archivo `REPORTE-ANALISIS.md`.
+
+## Flujo ejecutado
+
+El flujo esperado del caso fue:
+
+1. Ejecutar el analisis del repositorio externo.
+2. Explorar la estructura del repositorio.
+3. Identificar el objetivo del proyecto.
+4. Relevar dependencias y convenciones.
+5. Recuperar fuentes para respaldar la respuesta.
+6. Redactar el reporte final.
+7. Validar el resultado con un check tecnico acotado.
+8. Revisar que el reporte responda al pedido original.
+
+El reporte generado incluye las secciones:
+
+- resumen;
+- estructura;
+- dependencias;
+- convenciones;
+- fuentes.
 
 ## Criterio de cumplimiento
 
-El caso de uso se considera cumplido cuando se verifica que el sistema:
+El caso de uso se considera cumplido si el sistema logra:
 
-- Ejecuta el flujo completo sin depender de un framework externo de
-  orquestacion.
-- Usa subagentes con roles diferenciados.
-- Comparte estado entre los pasos mediante `TaskState`.
-- Recupera evidencia con una estrategia RAG-first.
-- Genera el archivo `REPORTE-ANALISIS.md`.
-- Ejecuta al menos un check tecnico real mediante el subagente Tester.
-- Realiza una revision final mediante el subagente Reviewer.
-- Explicita fuentes utilizadas y faltas de evidencia cuando corresponde.
+- analizar el repositorio `pypa/sampleproject`;
+- identificar correctamente que se trata de un ejemplo para empaquetado Python;
+- generar un reporte Markdown persistido;
+- incluir estructura, dependencias y convenciones;
+- citar fuentes usadas;
+- completar el flujo multiagente hasta la revision final.
 
-En terminos practicos, una ejecucion exitosa debe poder correrse con:
+En esta entrega, el criterio principal se verifica con la existencia del archivo:
 
-```bash
-python analyze.py "Analiza este repositorio y explica su arquitectura"
+```text
+REPORTE-ANALISIS.md
 ```
 
-y debe terminar mostrando el reporte por consola y dejando persistido el archivo
-`REPORTE-ANALISIS.md`.
+y con que su contenido describa el repositorio analizado, su proposito y los
+hallazgos principales.
 
-## Alcance
+## Resultado observado
 
-El alcance del caso se centra en **analisis y documentacion tecnica de
-repositorios**. No busca reemplazar un proceso completo de desarrollo, sino
-automatizar una primera lectura estructurada del proyecto y producir evidencia
-util para entenderlo.
+El reporte generado identifica a `pypa/sampleproject` como un proyecto de ejemplo
+para empaquetado y distribucion de proyectos Python. Tambien registra fuentes
+asociadas al repositorio y a discusiones de issues en GitHub.
 
-Quedan dentro del alcance:
+Como observacion, el reporte mezcla parte de la descripcion del repositorio
+analizado con elementos de la arquitectura interna del agente `coding-agent`.
+Esto muestra una limitacion relevante del sistema: cuando el agente trabaja sobre
+un repo externo, debe separar con mas claridad:
 
-- Analizar estructura y archivos relevantes.
-- Identificar dependencias.
-- Generar reportes Markdown.
-- Consultar evidencia local mediante RAG.
-- Complementar con busqueda web si RAG no alcanza.
-- Ejecutar checks seguros y acotados.
-- Registrar observaciones de revision.
+- informacion del repositorio analizado;
+- informacion del agente que realiza el analisis;
+- inferencias propias;
+- fuentes externas.
 
-Quedan fuera del alcance principal:
-
-- Hacer cambios funcionales complejos en proyectos externos.
-- Ejecutar suites de tests arbitrarias sin allowlist.
-- Administrar despliegues.
-- Reemplazar una auditoria humana completa.
+Esa observacion es util para el cierre del trabajo porque evidencia una mejora
+posible en la precision del Researcher y del Reviewer.
