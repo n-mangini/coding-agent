@@ -10,9 +10,7 @@ CrewAI, AutoGen).
 
 > Este README explica **qué es y cómo está pensado** el proyecto (arquitectura y
 > conceptos). Para lo operativo —setup, variables de entorno, cómo correrlo—
-> ver [`CLAUDE.md`](./CLAUDE.md). El roadmap del TP está en
-> [`docs/plan-tp-final.md`](./docs/plan-tp-final.md) y la reflexión de cierre en
-> [`docs/cierre-reflexion.md`](./docs/cierre-reflexion.md).
+> ver [`CLAUDE.md`](./CLAUDE.md).
 
 ## La idea en una frase
 
@@ -191,7 +189,7 @@ tool como *span*, todo anidado bajo una traza raíz por caso de uso (`observed_r
 La instrumentación es un **drop-in** sobre el único borde OpenAI, así que no agrega
 un segundo call site; y **sin credenciales es un no-op** que no rompe la corrida.
 
-![Traza de un análisis de repo en Langfuse](docs/assets/langfuse-analyze-repo.png)
+![Traza de un análisis de repo en Langfuse](docs/entregables/assets/trace-graph-summary.png)
 
 ## Principios de diseño
 
