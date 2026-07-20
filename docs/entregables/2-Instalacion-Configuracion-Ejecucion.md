@@ -204,6 +204,32 @@ La ingesta:
 Durante el analisis, el subagente Researcher consulta primero `retrieve`. Solo si
 RAG no alcanza, usa `web_search` como fallback.
 
+### Analisis con RAG especializado (`--python`)
+
+`analyze.py` ofrece un atajo para no tener que ingestar a mano antes de analizar
+un repo Python: la opcion `--python`. En una sola corrida, este modo:
+
+1. Ingesta automaticamente las fuentes de `rag/sources/python/` en el indice RAG
+   (una base de referencia para razonar sobre repos del ecosistema Python).
+2. Clona el repositorio indicado y hace `chdir` a el.
+3. Ejecuta el flujo multiagente completo.
+
+```bash
+python analyze.py --python https://github.com/usuario/repositorio.git
+```
+
+Tambien admite un foco especifico como argumento posicional:
+
+```bash
+python analyze.py --python https://github.com/usuario/repositorio.git \
+  "Analiza la arquitectura, dependencias y riesgos principales"
+```
+
+A diferencia de `--clone`, que clona y analiza sin tocar el indice, `--python`
+garantiza que el Researcher tenga contenido RAG que recuperar desde la primera
+corrida (las fuentes recuperadas aparecen con su origen `rag` en el reporte).
+`--python` y `--clone` son mutuamente excluyentes.
+
 ## Ejecucion de tareas demo
 
 El proyecto incluye `run_tests.py`, que ejecuta una bateria de tareas de ejemplo

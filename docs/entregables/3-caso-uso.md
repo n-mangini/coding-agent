@@ -134,22 +134,3 @@ REPORTE-ANALISIS.md
 
 y con que su contenido describa el repositorio analizado, su proposito y los
 hallazgos principales.
-
-## Resultado observado
-
-El reporte generado identifica a `pypa/sampleproject` como un proyecto de ejemplo
-para empaquetado y distribucion de proyectos Python. Tambien registra fuentes
-asociadas al repositorio y a discusiones de issues en GitHub.
-
-Como observacion, el reporte mezcla parte de la descripcion del repositorio
-analizado con elementos de la arquitectura interna del agente `coding-agent`.
-Esto muestra una limitacion relevante del sistema: cuando el agente trabaja sobre
-un repo externo, debe separar con mas claridad:
-
-- informacion del repositorio analizado;
-- informacion del agente que realiza el analisis;
-- inferencias propias;
-- fuentes externas.
-
-Esa observacion es util para el cierre del trabajo porque evidencia una mejora
-posible en la precision del Researcher y del Reviewer.

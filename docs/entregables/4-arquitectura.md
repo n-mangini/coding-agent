@@ -3,7 +3,7 @@
 ## Descripcion general
 
 La arquitectura del proyecto esta organizada como un sistema **multiagente**
-construido sobre un motor comun llamado `Harness`.
+construido sobre un `Harness`.
 
 La idea principal es que todos los agentes comparten el mismo mecanismo base:
 
@@ -256,12 +256,6 @@ informacion para componer el reporte final.
 
 Ademas del estado vivo de una ejecucion, el sistema tiene memoria persistente por
 proyecto.
-
-Archivo:
-
-```text
-agent/memory.py
-```
 
 La memoria se guarda en:
 

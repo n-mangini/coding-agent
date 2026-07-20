@@ -74,11 +74,10 @@ Una dificultad importante fue que las pruebas end-to-end dependen de servicios
 externos como OpenAI y Tavily. Eso puede generar fallos que no dependen del
 codigo del proyecto, por ejemplo:
 
-- API key incorrecta;
 - falta de cuota;
 - `.env` mal configurado;
 - Tavily no disponible;
-- diferencias entre entornos de ejecucion.
+- diferencias entre entornos de ejecucion. (Windows)
 
 Esto mostro que conviene separar mejor las pruebas locales de las pruebas reales
 contra APIs externas.
@@ -108,41 +107,6 @@ de tests. Es una validacion util para el TP, aunque limitada.
 Ademas, en algunas pruebas aparecieron diferencias de entorno, por ejemplo el
 uso de `python` versus `python3`. Eso obligo a ajustar el comando permitido para
 que funcionara en el entorno real.
-
-### Proceso de issues y PRs
-
-Tambien aparecio un problema de proceso: usar `Refs #N` en una PR no cierra
-automaticamente una issue en GitHub. Para cierre automatico se deben usar
-palabras como:
-
-```text
-Closes #N
-Fixes #N
-Resolves #N
-```
-
-No afecta el codigo, pero si muestra que el proceso de trabajo tambien necesita
-convenciones claras.
-
-## Loops detectados
-
-El sistema incluye deteccion de loops en `Harness`. La logica observa llamadas a
-tools repetidas. Si el agente repite la misma accion varias veces sin avanzar,
-el sistema:
-
-1. inyecta una senal para replantear la estrategia;
-2. si el loop persiste, corta la ejecucion y registra una observacion.
-
-Durante el flujo final no se observo un loop bloqueante, pero la proteccion es
-importante porque los agentes con tools pueden caer en patrones repetitivos, como:
-
-- leer el mismo archivo muchas veces;
-- repetir la misma busqueda;
-- volver a ejecutar el mismo comando despues de un error;
-- insistir con una tool no disponible.
-
-Lo mas importante es que esos eventos no quedan ocultos: se registran en
-`TaskState.observations` y pueden aparecer en el reporte final.
 
 ## Falta de evidencia detectada
 
@@ -214,12 +178,6 @@ podria exigir un esquema mas estricto:
 - veredicto final del Reviewer;
 - lista separada de inferencias y faltas de evidencia.
 
-### Mejor integracion de observabilidad en la entrega
-
-La observabilidad ya existe, pero para la entrega podria complementarse con una
-captura o export de una traza completa por cada tarea demostrada, de modo que sea
-mas facil defender que pasos ejecuto el agente y que fuentes uso.
-
 ## Sintesis final
 
 El sistema funciono mejor cuando las responsabilidades quedaron explicitas:
@@ -232,6 +190,3 @@ del indice RAG y la necesidad de validar en entornos distintos. La mejora mas
 importante seria agregar pruebas locales sin LLM y una preparacion de RAG mas
 guiada.
 
-La conclusion principal es que el agente no solo debe producir respuestas: debe
-mostrar de donde salieron, que pudo validar, que no pudo validar y que hizo
-durante la ejecucion.
