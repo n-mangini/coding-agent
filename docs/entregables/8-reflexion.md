@@ -129,6 +129,61 @@ TaskState.missing_evidence
 Separar la falta de evidencia de las observaciones generales ayuda a que el
 reporte final sea mas honesto y auditable.
 
+## Loops detectados y manejo
+
+El harness incluye deteccion de loops: si el agente repite la misma tool call
+varias veces seguidas (mismo nombre y mismos argumentos), se interpreta como que
+esta atascado sin avanzar. La logica vive en:
+
+```text
+detect_loop  ->  _intervene_on_loop
+```
+
+La intervencion es escalonada:
+
+1. primero se inyecta una senal para que el modelo replanifique;
+2. si el loop persiste, se corta la ejecucion y se pide ayuda en lugar de seguir
+   gastando llamadas.
+
+Cada intervencion queda registrada como evento, y `Subagent.run` la traslada a
+`TaskState.observations`, de modo que un loop nunca queda invisible: aparece en
+el estado y puede reflejarse en el reporte final.
+
+### Loop forzado como prueba
+
+Para verificar el mecanismo se forzo un escenario de loop controlado: se ejercito
+el `Harness` real (con la tool `list_files` real) pero con un cliente LLM
+determinista que repite siempre la misma tool call. Asi el loop se dispara a
+demanda, algo que con un LLM real no es reproducible de forma confiable. No se
+mockea la deteccion: corre el camino real
+`run_conversation -> detect_loop -> _intervene_on_loop`.
+
+Con `LOOP_THRESHOLD = 3`, la corrida mostro el escalado completo:
+
+```text
+# tras 3 tool calls identicas: replanteo
+🔁 Detecté que estás repitiendo la misma acción sin avanzar. Pará,
+   replanteá tu estrategia y probá un enfoque distinto...
+
+# tras 3 mas, pese al replanteo: se detiene y pide ayuda
+🛑 Me detuve por seguridad: seguí repitiendo la misma acción incluso
+   después de intentar replantear, así que estoy en un loop del que no
+   puedo salir solo. Necesito ayuda o más información para continuar.
+```
+
+Los eventos quedaron registrados en `loop_events` (y de ahi pasan a
+`TaskState.observations` via `Subagent.run`):
+
+```text
+- Loop detectado: se pidió replantear la estrategia.
+- Loop persistente: el agente se detuvo y pidió ayuda para continuar.
+```
+
+La corrida corto en 6 turnos en vez de reintentar para siempre. El patron es
+esperable en agentes con tools (releer el mismo archivo, repetir una busqueda o
+reintentar un comando que falla), y tenerlo cubierto evita corridas que se
+cuelgan de forma silenciosa.
+
 ## Que mejoraria del sistema
 
 ### Tests locales sin LLM
